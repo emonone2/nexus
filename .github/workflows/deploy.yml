@@ -36,6 +36,10 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_DzWJSdRhhqnvPbug7-bA7g_qLa2OIuM
         run: npm run build
 
+      - name: Add Pages SPA fallback
+        shell: bash
+        run: cp dist/index.html dist/404.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
