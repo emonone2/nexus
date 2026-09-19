@@ -136,7 +136,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Layout>
             <Routes>
 
