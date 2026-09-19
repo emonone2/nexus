@@ -31,6 +31,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://oapmtxblarjuhybghzmp.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_DzWJSdRhhqnvPbug7-bA7g_qLa2OIuM
         run: npm run build
 
       - name: Upload artifact
