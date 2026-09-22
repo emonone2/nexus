@@ -246,6 +246,36 @@ export default function ProfileView() {
   }
 
   // ==========================================
+  // UNFRIEND CONNECTION
+  // ==========================================
+
+  async function handleUnfriend() {
+    if (!currentUser || !profile) return;
+
+    try {
+      setFriendLoading(true);
+      setMessage('');
+
+      const { error } = await supabase
+        .from('friend_requests')
+        .delete()
+        .or(
+          `and(sender_id.eq.${currentUser.id},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${currentUser.id})`
+        );
+
+      if (error) throw error;
+
+      setFriendStatus('none');
+      setMessage('Unfriended successfully.');
+    } catch (err) {
+      console.error('Unfriend error:', err);
+      setMessage(err.message || 'Failed to unfriend.');
+    } finally {
+      setFriendLoading(false);
+    }
+  }
+
+  // ==========================================
   // LOADING
   // ==========================================
 
@@ -370,10 +400,11 @@ export default function ProfileView() {
               <div>
                 {friendStatus === 'friends' && (
                   <button
-                    disabled
-                    className="px-6 py-3 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-semibold"
+                    onClick={handleUnfriend}
+                    disabled={friendLoading}
+                    className="px-6 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-500 hover:text-white border border-rose-500/20 font-semibold transition cursor-pointer"
                   >
-                    ✓ Friends
+                    {friendLoading ? 'Please wait...' : 'Unfriend'}
                   </button>
                 )}
 

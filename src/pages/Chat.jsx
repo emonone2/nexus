@@ -16,6 +16,10 @@ import {
   MicOff,
   PhoneOff,
   X,
+  CheckCheck,
+  File,
+  Download,
+  FileText,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabaseClient';
@@ -45,6 +49,27 @@ export default function Chat() {
   const [error, setError] = useState('');
 
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const [selectedFile, setSelectedFile] = useState(null); // { name, type, size, data }
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSelectedFile({
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        data: event.target?.result
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   // =====================================================
   // VOICE CALL
@@ -613,13 +638,25 @@ const sendMessage = async (e) => {
 
   const text = inputText.trim();
 
-  if (!text) return;
+  if (!text && !selectedFile) return;
   if (!activeChat?.id) return;
   if (!currentUser?.id) return;
 
   try {
     setSending(true);
     setError('');
+
+    let finalContent = text;
+    let msgType = 'text';
+    if (selectedFile) {
+      if (selectedFile.type.startsWith('image/')) {
+        finalContent = `[IMAGE]:${selectedFile.data}${text ? `[CAPTION]:${text}` : ''}`;
+        msgType = 'image';
+      } else {
+        finalContent = `[FILE]:${selectedFile.name}|${selectedFile.type}|${selectedFile.data}${text ? `[CAPTION]:${text}` : ''}`;
+        msgType = 'file';
+      }
+    }
 
     // ==========================================
     // 1. SEND MESSAGE
@@ -630,8 +667,8 @@ const sendMessage = async (e) => {
       .insert({
         conversation_id: activeChat.id,
         sender_id: currentUser.id,
-        content: text,
-        message_type: 'text',
+        content: finalContent,
+        message_type: msgType,
         is_seen: false,
       })
       .select()
@@ -662,12 +699,16 @@ const sendMessage = async (e) => {
     // 3. UPDATE CHAT PREVIEW
     // ==========================================
 
+    const previewText = selectedFile 
+      ? (selectedFile.type.startsWith('image/') ? '📷 Image Attachment' : `📁 ${selectedFile.name}`)
+      : text;
+
     setConversations((previous) =>
       previous.map((chat) =>
         chat.id === activeChat.id
           ? {
               ...chat,
-              lastMessage: text,
+              lastMessage: previewText,
               lastMessageTime: data.created_at,
             }
           : chat
@@ -713,6 +754,8 @@ const sendMessage = async (e) => {
     // ==========================================
 
     setInputText('');
+    setSelectedFile(null);
+    setShowEmojiPicker(false);
 
   } catch (err) {
     console.error(
@@ -1347,6 +1390,27 @@ const sendMessage = async (e) => {
 
                       const previous = messages[index - 1];
 
+                      let messageImageUrl = null;
+                      let messageFile = null; // { name, type, data }
+                      let messageText = message.content || '';
+                      if (messageText.startsWith('[IMAGE]:')) {
+                        const parts = messageText.substring(8).split('[CAPTION]:');
+                        messageImageUrl = parts[0];
+                        messageText = parts[1] || '';
+                      } else if (messageText.startsWith('[FILE]:')) {
+                        const parts = messageText.substring(7).split('[CAPTION]:');
+                        const filePayload = parts[0];
+                        messageText = parts[1] || '';
+                        const fileParts = filePayload.split('|');
+                        if (fileParts.length >= 3) {
+                          messageFile = {
+                            name: fileParts[0],
+                            type: fileParts[1],
+                            data: fileParts.slice(2).join('|')
+                          };
+                        }
+                      }
+
                       const previousMine =
                         previous &&
                         previous.sender_id === currentUser.id;
@@ -1404,22 +1468,66 @@ const sendMessage = async (e) => {
                               }`}
                             >
                               <div
-                                className={`px-4 py-2.5 text-sm leading-5 shadow-sm ${
+                                className={`px-4 py-2.5 text-sm leading-5 shadow-sm overflow-hidden ${
                                   mine
                                     ? 'bg-indigo-600 text-white rounded-2xl rounded-br-md'
                                     : 'bg-slate-800 text-slate-100 rounded-2xl rounded-bl-md'
                                 }`}
                               >
-                                <p className="whitespace-pre-wrap break-words">
-                                  {message.content}
-                                </p>
+                                {messageImageUrl && (
+                                  <div className="mb-2 rounded-xl overflow-hidden max-w-xs border border-slate-700 bg-black/40">
+                                    <img 
+                                      src={messageImageUrl} 
+                                      alt="Attachment" 
+                                      className="w-full h-auto max-h-60 object-cover cursor-zoom-in hover:scale-[1.01] transition-transform duration-300"
+                                      onClick={() => window.open(messageImageUrl, '_blank')}
+                                    />
+                                  </div>
+                                )}
+                                {messageFile && (
+                                  <div className="mb-2 p-3 rounded-xl bg-slate-900/60 dark:bg-slate-950/40 border border-slate-700/50 flex items-center gap-3 max-w-xs select-none">
+                                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                                      {messageFile.type.includes('text') || messageFile.type.includes('pdf') ? (
+                                        <FileText className="w-5 h-5" />
+                                      ) : (
+                                        <File className="w-5 h-5" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-bold text-slate-100 truncate" title={messageFile.name}>
+                                        {messageFile.name}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400 truncate">
+                                        {messageFile.type.split('/')[1]?.toUpperCase() || 'FILE'}
+                                      </p>
+                                    </div>
+                                    <a
+                                      href={messageFile.data}
+                                      download={messageFile.name}
+                                      className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white flex items-center justify-center transition shrink-0"
+                                      title={`Download ${messageFile.name}`}
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </a>
+                                  </div>
+                                )}
+                                {messageText && (
+                                  <p className="whitespace-pre-wrap break-words font-medium">
+                                    {messageText}
+                                  </p>
+                                )}
                               </div>
 
-                              <span className="text-[10px] text-slate-600 mt-1 px-1">
-                                {formatMessageTime(
-                                  message.created_at
+                              <div className="flex items-center gap-1 mt-1 px-1 text-[10px] text-slate-500 font-medium">
+                                <span>
+                                  {formatMessageTime(
+                                    message.created_at
+                                  )}
+                                </span>
+                                {mine && (
+                                  <CheckCheck className="w-3.5 h-3.5 text-indigo-500" />
                                 )}
-                              </span>
+                              </div>
                             </div>
                           </div>
                         </React.Fragment>
@@ -1431,15 +1539,76 @@ const sendMessage = async (e) => {
                 )}
               </div>
 
+              {/* FILE PREVIEW DRAWER */}
+              {selectedFile && (
+                <div className="px-4 md:px-6 py-2.5 border-t border-slate-800 bg-slate-950 flex items-center justify-between animate-fade-in">
+                  <div className="flex items-center gap-3 bg-slate-900/80 p-2 rounded-2xl border border-slate-800 relative">
+                    {selectedFile.type.startsWith('image/') ? (
+                      <img 
+                        src={selectedFile.data} 
+                        alt="Attachment preview" 
+                        className="w-14 h-14 object-cover rounded-xl border border-slate-700"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-slate-800">
+                        <File className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="min-w-0 pr-8">
+                      <p className="text-xs text-slate-200 font-bold truncate max-w-[180px] sm:max-w-xs">{selectedFile.name}</p>
+                      <p className="text-[10px] text-slate-500 font-semibold">
+                        {(selectedFile.size / 1024).toFixed(1)} KB · Ready to send
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFile(null)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-500/80 hover:bg-rose-600 text-white flex items-center justify-center transition cursor-pointer"
+                      title="Remove attachment"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* EMOJI PICKER DRAWER */}
+              {showEmojiPicker && (
+                <div className="px-4 md:px-6 py-3 border-t border-slate-800 bg-slate-900 flex flex-wrap gap-2 justify-center max-w-4xl mx-auto rounded-t-3xl shadow-inner">
+                  {['😀', '😂', '😍', '👍', '🔥', '🎉', '❤️', '🙌', '👏', '🤔', '😎', '⭐', '🎂', '🎈', '⚡', '✨', '☕', '🍕', '👀', '💡', '🚀', '💯'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => {
+                        setInputText(prev => prev + emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                      className="w-10 h-10 rounded-xl hover:bg-slate-800 flex items-center justify-center text-lg transition duration-200 cursor-pointer"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* MESSAGE COMPOSER */}
               <form
                 onSubmit={sendMessage}
                 className="shrink-0 px-4 md:px-6 py-4 border-t border-slate-800 bg-slate-950"
               >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept="*/*" 
+                  className="hidden" 
+                />
+
                 <div className="max-w-4xl mx-auto flex items-center gap-2">
                   <button
                     type="button"
-                    className="w-10 h-10 rounded-full hover:bg-slate-800 text-slate-500 hover:text-slate-300 flex items-center justify-center transition"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-10 h-10 rounded-full hover:bg-slate-800 text-slate-500 hover:text-slate-300 flex items-center justify-center transition cursor-pointer"
                     title="Attach"
                   >
                     <Paperclip className="w-5 h-5" />
@@ -1458,7 +1627,8 @@ const sendMessage = async (e) => {
 
                     <button
                       type="button"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full hover:bg-slate-800 text-slate-500 hover:text-amber-400 flex items-center justify-center transition"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full hover:bg-slate-800 text-slate-500 hover:text-amber-400 flex items-center justify-center transition cursor-pointer"
                       title="Emoji"
                     >
                       <Smile className="w-5 h-5" />
@@ -1469,9 +1639,9 @@ const sendMessage = async (e) => {
                     type="submit"
                     disabled={
                       sending ||
-                      !inputText.trim()
+                      (!inputText.trim() && !selectedFile)
                     }
-                    className="w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition shadow-lg shadow-indigo-900/20"
+                    className="w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition shadow-lg shadow-indigo-900/20 cursor-pointer"
                     title="Send message"
                   >
                     {sending ? (

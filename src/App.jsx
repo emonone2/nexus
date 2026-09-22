@@ -6,6 +6,7 @@ import {
   Navigate,
   useLocation
 } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { ThemeProvider } from './context/ThemeContext';
 import { AppProvider, useApp } from './context/AppContext';
@@ -19,7 +20,7 @@ import StoryViewerModal from './components/StoryViewerModal';
 // Pages
 import Home from './pages/Home';
 import Profile from './pages/Profile';
-import ProfileView from './pages/ProfileView'; // ✅ NEW
+import ProfileView from './pages/ProfileView';
 import Friends from './pages/Friends';
 import Chat from './pages/Chat';
 import Login from './pages/Login';
@@ -36,17 +37,11 @@ import Settings from './pages/Settings';
    ============================================================ */
 function AuthLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-[#0B0D19] text-white">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
-
-        <h2 className="text-lg font-semibold">
-          Checking your session...
-        </h2>
-
-        <p className="text-sm text-slate-400 mt-1">
-          Please wait
-        </p>
+        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+        <h2 className="text-lg font-bold font-['Outfit'] tracking-tight">Checking your session...</h2>
+        <p className="text-xs text-slate-400 mt-1 font-medium">Please wait a moment</p>
       </div>
     </div>
   );
@@ -54,17 +49,14 @@ function AuthLoading() {
 
 /* ============================================================
    PROTECTED ROUTE
-   User must be logged in to access the main application.
    ============================================================ */
 function ProtectedRoute({ children }) {
   const { currentUser, authReady } = useApp();
 
-  // Supabase session is still being checked
   if (!authReady) {
     return <AuthLoading />;
   }
 
-  // No logged-in user → Login page
   if (!currentUser?.id || !currentUser?.isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
@@ -74,22 +66,36 @@ function ProtectedRoute({ children }) {
 
 /* ============================================================
    PUBLIC ROUTE
-   Login/Register are only for users who are NOT logged in.
    ============================================================ */
 function PublicRoute({ children }) {
   const { currentUser, authReady } = useApp();
 
-  // Wait until Supabase finishes checking session
   if (!authReady) {
     return <AuthLoading />;
   }
 
-  // Already logged in → Home
   if (currentUser?.id && currentUser?.isLoggedIn) {
     return <Navigate to="/" replace />;
   }
 
   return children;
+}
+
+/* ============================================================
+   PAGE ROUTE WRAPPER (FOR TRANSITION STYLES)
+   ============================================================ */
+function AnimatedPageWrapper({ children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      className="w-full h-full"
+    >
+      {children}
+    </motion.div>
+  );
 }
 
 /* ============================================================
@@ -102,20 +108,30 @@ function Layout({ children }) {
     location.pathname === '/login' ||
     location.pathname === '/register';
 
-  // Login/Register should not show Navbar/Sidebar/Rightbar
   if (isAuthPage) {
     return <main>{children}</main>;
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0B0F19]">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0B0F19] transition-colors duration-300">
       <Navbar />
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6">
         <Sidebar />
 
         <main className="flex-1 min-w-0">
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="h-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {location.pathname !== '/chat' &&
@@ -130,7 +146,7 @@ function Layout({ children }) {
 }
 
 /* ============================================================
-   APP
+   APP WITH ROUTER
    ============================================================ */
 export default function App() {
   return (
@@ -139,11 +155,7 @@ export default function App() {
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Layout>
             <Routes>
-
-              {/* ==================================================
-                  PUBLIC AUTH ROUTES
-                  ================================================== */}
-
+              {/* PUBLIC AUTH ROUTES */}
               <Route
                 path="/login"
                 element={
@@ -162,15 +174,14 @@ export default function App() {
                 }
               />
 
-              {/* ==================================================
-                  PROTECTED APPLICATION ROUTES
-                  ================================================== */}
-
+              {/* PROTECTED ROUTES */}
               <Route
                 path="/"
                 element={
                   <ProtectedRoute>
-                    <Home />
+                    <AnimatedPageWrapper>
+                      <Home />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -179,35 +190,31 @@ export default function App() {
                 path="/explore"
                 element={
                   <ProtectedRoute>
-                    <Explore />
+                    <AnimatedPageWrapper>
+                      <Explore />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
-
-              {/* ==================================================
-                  MY PROFILE
-                  /profile
-                  ================================================== */}
 
               <Route
                 path="/profile"
                 element={
                   <ProtectedRoute>
-                    <Profile />
+                    <AnimatedPageWrapper>
+                      <Profile />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
-
-              {/* ==================================================
-                  OTHER USER PROFILE
-                  /profile/:userId
-                  ================================================== */}
 
               <Route
                 path="/profile/:userId"
                 element={
                   <ProtectedRoute>
-                    <ProfileView />
+                    <AnimatedPageWrapper>
+                      <ProfileView />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -216,7 +223,9 @@ export default function App() {
                 path="/friends"
                 element={
                   <ProtectedRoute>
-                    <Friends />
+                    <AnimatedPageWrapper>
+                      <Friends />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -225,7 +234,9 @@ export default function App() {
                 path="/chat"
                 element={
                   <ProtectedRoute>
-                    <Chat />
+                    <AnimatedPageWrapper>
+                      <Chat />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -234,7 +245,9 @@ export default function App() {
                 path="/groups"
                 element={
                   <ProtectedRoute>
-                    <Groups />
+                    <AnimatedPageWrapper>
+                      <Groups />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -243,7 +256,9 @@ export default function App() {
                 path="/marketplace"
                 element={
                   <ProtectedRoute>
-                    <Marketplace />
+                    <AnimatedPageWrapper>
+                      <Marketplace />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -252,7 +267,9 @@ export default function App() {
                 path="/saved"
                 element={
                   <ProtectedRoute>
-                    <Saved />
+                    <AnimatedPageWrapper>
+                      <Saved />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -261,7 +278,9 @@ export default function App() {
                 path="/notifications"
                 element={
                   <ProtectedRoute>
-                    <Notifications />
+                    <AnimatedPageWrapper>
+                      <Notifications />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
@@ -270,20 +289,18 @@ export default function App() {
                 path="/settings"
                 element={
                   <ProtectedRoute>
-                    <Settings />
+                    <AnimatedPageWrapper>
+                      <Settings />
+                    </AnimatedPageWrapper>
                   </ProtectedRoute>
                 }
               />
 
-              {/* ==================================================
-                  UNKNOWN ROUTE
-                  ================================================== */}
-
+              {/* FALLBACK */}
               <Route
                 path="*"
                 element={<Navigate to="/" replace />}
               />
-
             </Routes>
           </Layout>
         </BrowserRouter>

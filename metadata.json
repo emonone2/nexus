@@ -1,0 +1,8 @@
+{
+  "name": "Nexus",
+  "description": "Next Gen Social Platform",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

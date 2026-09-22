@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Pause, Play, Heart, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 
 export default function StoryViewerModal() {
@@ -24,109 +25,136 @@ export default function StoryViewerModal() {
     return () => clearInterval(interval);
   }, [activeStory, isPlaying, setActiveStory]);
 
-  if (!activeStory) return null;
-
   const handleClose = () => {
     setActiveStory(null);
     setProgress(0);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-lg animate-in fade-in duration-300 p-4">
-      
-      {/* Main Story Container */}
-      <div className="relative w-full max-w-sm h-[600px] rounded-3xl overflow-hidden shadow-2xl bg-slate-900 border border-white/10 flex flex-col justify-between">
-        
-        {/* Background Image */}
-        <img
-          src={activeStory.bg || activeStory.image}
-          alt={activeStory.user}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-transparent to-slate-950/90" />
-
-        {/* Top Header Controls */}
-        <div className="relative z-10 p-4 space-y-3">
+    <AnimatePresence>
+      {activeStory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           
-          {/* Animated Progress Bar */}
-          <div className="w-full h-1 bg-white/30 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white transition-all duration-100 ease-linear"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          {/* Backdrop Fader */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+            className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl"
+          />
 
-          {/* User Info & Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src={activeStory.avatar}
-                alt={activeStory.user}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500"
-              />
-              <div>
-                <h4 className="font-bold text-sm text-white drop-shadow">{activeStory.user}</h4>
-                <p className="text-[11px] text-slate-300">Active story</p>
+          {/* Main Story Container Frame */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="relative w-full max-w-sm h-[620px] rounded-[32px] overflow-hidden shadow-2xl bg-slate-950 border border-white/10 flex flex-col justify-between z-10"
+          >
+            
+            {/* Background Story Photo */}
+            <img
+              src={activeStory.bg || activeStory.image}
+              alt={activeStory.user}
+              className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90 pointer-events-none" />
+
+            {/* Top Controls Header */}
+            <div className="relative z-10 p-5 space-y-4">
+              
+              {/* Timeline Meter */}
+              <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white transition-all duration-100 ease-linear"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              {/* Author & Interactions */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={activeStory.avatar}
+                    alt={activeStory.user}
+                    className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500"
+                  />
+                  <div>
+                    <h4 className="font-extrabold text-sm text-white drop-shadow-md font-['Outfit']">{activeStory.user}</h4>
+                    <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Active Story</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="p-2 text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                  >
+                    {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleClose}
+                    className="p-2 text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+            {/* Side Arrow Navigation Helpers */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setProgress(0)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 backdrop-blur-md cursor-pointer border border-white/5"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                setActiveStory(null);
+                setProgress(0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 backdrop-blur-md cursor-pointer border border-white/5"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+
+            {/* Bottom Reply Bar Panel */}
+            <div className="relative z-10 p-5 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder={`Reply to ${activeStory.user.split(' ')[0]}...`}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                className="flex-1 px-4.5 py-3 bg-white/10 backdrop-blur-lg border border-white/10 rounded-full text-xs sm:text-sm text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              
+              <motion.button 
+                whileTap={{ scale: 0.9 }}
+                className="p-3 bg-gradient-to-tr from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full shadow-lg transition-transform cursor-pointer"
               >
-                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-              </button>
-              <button
-                onClick={handleClose}
-                className="p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                <Heart className="w-4.5 h-4.5 fill-current" />
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                disabled={!replyText.trim()}
+                onClick={() => setReplyText('')}
+                className="p-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white rounded-full shadow-lg transition-all cursor-pointer"
               >
-                <X className="w-5 h-5" />
-              </button>
+                <Send className="w-4.5 h-4.5" />
+              </motion.button>
             </div>
-          </div>
+
+          </motion.div>
         </div>
-
-        {/* Navigation Touch Areas */}
-        <button
-          onClick={() => setProgress(0)}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-slate-950/40 text-white hover:bg-slate-950/70"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveStory(null);
-            setProgress(0);
-          }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-slate-950/40 text-white hover:bg-slate-950/70"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-
-        {/* Bottom Reply Bar */}
-        <div className="relative z-10 p-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder={`Reply to ${activeStory.user.split(' ')[0]}...`}
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            className="flex-1 px-4 py-2.5 bg-white/20 backdrop-blur-md border border-white/20 rounded-full text-xs text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <button className="p-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-full shadow-lg transition-transform hover:scale-110">
-            <Heart className="w-5 h-5 fill-current" />
-          </button>
-          <button
-            disabled={!replyText.trim()}
-            onClick={() => setReplyText('')}
-            className="p-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-full shadow-lg transition-all"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

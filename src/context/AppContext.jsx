@@ -49,12 +49,123 @@ export const AppProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(emptyUser);
   const [authReady, setAuthReady] = useState(false);
 
-  const [stories, setStories] = useState([]);
+  const [stories, setStories] = useState([
+    {
+      id: 'story_1',
+      user: 'Sarah Connor',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
+      bg: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&h=600&q=80',
+      hasUnseen: true
+    },
+    {
+      id: 'story_2',
+      user: 'Alex Rivers',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
+      bg: 'https://images.unsplash.com/photo-1607799279861-4dd421887fb3?auto=format&fit=crop&w=400&h=600&q=80',
+      hasUnseen: true
+    },
+    {
+      id: 'story_3',
+      user: 'Elena Rostova',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80',
+      bg: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=400&h=600&q=80',
+      hasUnseen: false
+    },
+    {
+      id: 'story_4',
+      user: 'Marcus Vance',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80',
+      bg: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&h=600&q=80',
+      hasUnseen: true
+    }
+  ]);
   const [activeStory, setActiveStory] = useState(null);
 
   const [posts, setPosts] = useState([]);
-  const [groupsList, setGroupsList] = useState([]);
-  const [productsList, setProductsList] = useState([]);
+  const [groupsList, setGroupsList] = useState([
+    {
+      id: 'group_1',
+      name: 'Vite & React Enthusiasts',
+      category: 'Tech & Code',
+      description: 'A global community of frontend developers focusing on Vite, React 19, and cutting-edge web tooling.',
+      members: 2450,
+      postsPerDay: '12+',
+      cover: 'https://images.unsplash.com/photo-1555066931-4365d14babdf9?auto=format&fit=crop&w=800&q=80',
+      isPrivate: false,
+      isJoined: false,
+    },
+    {
+      id: 'group_2',
+      name: 'Figma Designers Hub',
+      category: 'UI/UX Design',
+      description: 'Discussing layout systems, variables, auto layout hacks, design tokens, and user experience paradigms.',
+      members: 1890,
+      postsPerDay: '8+',
+      cover: 'https://images.unsplash.com/photo-1541462608143-67571c6738dd?auto=format&fit=crop&w=800&q=80',
+      isPrivate: false,
+      isJoined: true,
+    },
+    {
+      id: 'group_3',
+      name: 'Pacific Crest Trail Hikers',
+      category: 'Outdoors',
+      description: 'Gear recommendations, thru-hiking journals, safety alerts, and meetups along the Pacific Crest Trail.',
+      members: 950,
+      postsPerDay: '3+',
+      cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
+      isPrivate: false,
+      isJoined: false,
+    },
+    {
+      id: 'group_4',
+      name: 'Retro Arcade Lounge',
+      category: 'Gaming',
+      description: 'Nostalgic arcades, emulators, speedruns, custom cabinets, and classic pixel-art retro gaming.',
+      members: 3120,
+      postsPerDay: '20+',
+      cover: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80',
+      isPrivate: false,
+      isJoined: false,
+    }
+  ]);
+  const [productsList, setProductsList] = useState([
+    {
+      id: 'prod_1',
+      title: 'Neon Glow UI Kit (Figma)',
+      category: 'Digital Assets',
+      price: 29,
+      rating: '4.9',
+      seller: 'Sarah Connor',
+      sellerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
+      description: 'A complete Figma library featuring glassmorphism elements, fully responsive autolayout components, and dark-mode neon variables.',
+      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+      isPurchased: false
+    },
+    {
+      id: 'prod_2',
+      title: 'Minimalist Blog Theme (Vite/React)',
+      category: 'Templates',
+      price: 39,
+      rating: '4.8',
+      seller: 'Alex Rivers',
+      sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
+      description: 'Supercharged React 19 template with pre-configured Tailwind CSS v4, dynamic MDX blog posts, high SEO scoring, and fully responsive fluid layouts.',
+      image: 'https://images.unsplash.com/photo-1555066931-4365d14babdf9?auto=format&fit=crop&w=800&q=80',
+      isPurchased: false
+    },
+    {
+      id: 'prod_3',
+      title: 'Dreamscape Wallpaper Pack',
+      category: 'Wallpapers',
+      price: 12,
+      rating: '5.0',
+      seller: 'Elena Rostova',
+      sellerAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80',
+      description: '10 custom high-resolution (8K) premium digital wallpapers optimized for ultra-wide desktop monitors and mobile display screens.',
+      image: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80',
+      isPurchased: false
+    }
+  ]);
 
   const [conversations, setConversations] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -406,6 +517,7 @@ export const AppProvider = ({ children }) => {
 
       return {
         id: post.id,
+        userId: post.user_id,
         author: {
           name: author?.full_name || author?.username || 'User',
           handle: author?.username || '',
