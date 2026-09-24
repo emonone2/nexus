@@ -27,6 +27,30 @@ export default function Settings() {
   const [publicProfile, setPublicProfile] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [twoFactor, setTwoFactor] = useState(false);
+  const [isProfileLocked, setIsProfileLocked] = useState(
+    currentUser.isProfileLocked || localStorage.getItem(`nexus_profile_lock_${currentUser.id}`) === 'true'
+  );
+
+  const handleToggleProfileLock = async (checked) => {
+    setIsProfileLocked(checked);
+    setCurrentUser(prev => ({
+      ...prev,
+      isProfileLocked: checked
+    }));
+
+    try {
+      await supabase
+        .from('profiles')
+        .update({ is_profile_locked: checked })
+        .eq('id', currentUser.id);
+    } catch (e) {
+      console.warn("Database column lock error, falling back to local storage:", e);
+    }
+
+    localStorage.setItem(`nexus_profile_lock_${currentUser.id}`, checked ? 'true' : 'false');
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -177,6 +201,24 @@ export default function Settings() {
                     checked={publicProfile}
                     onChange={() => setPublicProfile(!publicProfile)}
                     className="w-5 h-5 accent-indigo-600 rounded cursor-pointer shrink-0"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between py-5 border-b border-slate-100 dark:border-slate-800/60 bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10">
+                  <div className="pr-4">
+                    <h4 className="font-extrabold text-xs sm:text-sm text-indigo-500 flex items-center gap-1.5 font-['Outfit']">
+                      <Shield className="w-4 h-4 text-indigo-500 fill-indigo-500/10" />
+                      <span>Lock Personal Profile</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-1 font-medium leading-relaxed">
+                      Secure your profile! If enabled, only accepted friends can visit your profile details, bio, or full posts. Non-friends will see a locked screen.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isProfileLocked}
+                    onChange={(e) => handleToggleProfileLock(e.target.checked)}
+                    className="w-5.5 h-5.5 accent-indigo-600 rounded cursor-pointer shrink-0"
                   />
                 </div>
 

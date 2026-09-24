@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Image, Smile, Video, Sparkles, Flame, Users, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import PostCard from '../components/PostCard';
 import CreatePostModal from '../components/CreatePostModal';
+import CreateStoryModal from '../components/CreateStoryModal';
 
 export default function Home() {
   const { 
@@ -13,8 +15,13 @@ export default function Home() {
     posts, 
     setIsPostModalOpen, 
     searchQuery,
-    setActiveStory
+    setActiveStory,
+    friendsList,
+    isStoryModalOpen,
+    setIsStoryModalOpen
   } = useApp();
+
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('all');
   const [friendIds, setFriendIds] = useState([]);
@@ -85,7 +92,7 @@ export default function Home() {
           <motion.div
             whileHover={{ y: -3, scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setIsPostModalOpen(true)}
+            onClick={() => setIsStoryModalOpen(true)}
             className="w-28 h-44 rounded-3xl relative overflow-hidden group cursor-pointer border border-slate-200/60 dark:border-slate-800/60 glass-card flex flex-col justify-between p-3.5 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-900/40"
           >
             <img
@@ -142,6 +149,48 @@ export default function Home() {
 
         </div>
       </div>
+
+      {/* Active Friends Horizontal Slider (Facebook style) */}
+      {friendsList && friendsList.filter(f => f.online).length > 0 && (
+        <div className="mb-6 bg-white dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/40 rounded-3xl p-4 sm:p-4.5 shadow-sm">
+          <div className="flex items-center justify-between mb-3 px-1.5">
+            <h5 className="font-extrabold text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
+              <span>Active Friends</span>
+            </h5>
+            <span className="text-[9px] sm:text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              {friendsList.filter(f => f.online).length} Active
+            </span>
+          </div>
+
+          <div className="overflow-x-auto no-scrollbar py-1">
+            <div className="flex gap-4.5 min-w-max px-1">
+              {friendsList.filter(f => f.online).map((friend) => (
+                <motion.div
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  key={friend.id}
+                  onClick={() => navigate(`/chat?userId=${friend.id}`)}
+                  className="flex flex-col items-center gap-1.5 cursor-pointer relative group text-center"
+                >
+                  <div className="relative">
+                    <img
+                      src={friend.avatar || null}
+                      alt={friend.name}
+                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover ring-2 ring-emerald-500/30 group-hover:ring-emerald-500/60 shadow-md group-hover:scale-105 transition-all"
+                    />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 flex items-center justify-center shadow-md">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 max-w-[65px] truncate group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                    {friend.name.split(' ')[0]}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. Create Post Input Trigger Box */}
       <div className="glass-card rounded-3xl p-5 mb-6 shadow-sm border border-slate-200/50 dark:border-slate-800/40 bg-white dark:bg-slate-900/40">
@@ -241,6 +290,7 @@ export default function Home() {
 
       {/* Post Creator Modal Layer */}
       <CreatePostModal />
+      <CreateStoryModal />
 
     </div>
   );

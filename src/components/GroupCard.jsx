@@ -3,7 +3,7 @@ import { Users, Globe, Lock, Check, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 
-export default function GroupCard({ group }) {
+export default function GroupCard({ group, onSelect }) {
   const { handleToggleJoinGroup } = useApp();
 
   return (
@@ -11,7 +11,8 @@ export default function GroupCard({ group }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="glass-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col border border-slate-200/50 dark:border-slate-800/40 group bg-white dark:bg-slate-900/40"
+      onClick={() => onSelect && onSelect(group)}
+      className="glass-card rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col border border-slate-200/50 dark:border-slate-800/40 group bg-white dark:bg-slate-900/40 cursor-pointer"
     >
       
       {/* Cover Image */}
@@ -57,7 +58,10 @@ export default function GroupCard({ group }) {
 
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={() => handleToggleJoinGroup(group.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleJoinGroup(group.id);
+            }}
             className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${
               group.isJoined
                 ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'

@@ -21,11 +21,17 @@ import {
   Download,
   FileText,
 } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { supabase } from '../lib/supabaseClient';
 import useVoiceCall from '../hooks/useVoiceCall';
+import { chatWithGemini } from '../lib/geminiService';
 
 export default function Chat() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const queryUserId = searchParams.get('userId');
+
   const [currentUser, setCurrentUser] = useState(null);
 
   const [conversations, setConversations] = useState([]);
@@ -130,6 +136,57 @@ export default function Chat() {
     loadConversations();
     loadFriends();
   }, [currentUser]);
+
+  // Auto-open chat if userId is in URL search parameters
+  useEffect(() => {
+    if (!currentUser || !queryUserId) return;
+
+    const autoOpen = async () => {
+      try {
+        // First try to load from Supabase profiles
+        let { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', queryUserId)
+          .maybeSingle();
+
+        // Fallback to local profiles
+        if (!profile) {
+          const profilesList = JSON.parse(localStorage.getItem('nexus_db_profiles') || '[]');
+          profile = profilesList.find(p => p.id === queryUserId);
+        }
+
+        // Fallback to curated mock profiles
+        if (!profile) {
+          const curatedMock = {
+            'user_sarah_connor': { id: 'user_sarah_connor', full_name: 'Sarah Connor', username: 'sarahconnor', profile_image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80' },
+            'user_alex_rivers': { id: 'user_alex_rivers', full_name: 'Alex Rivers', username: 'alexrivers', profile_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
+            'user_elena_rostova': { id: 'user_elena_rostova', full_name: 'Elena Rostova', username: 'elenarostova', profile_image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=300&q=80' },
+            'user_marcus_vance': { id: 'user_marcus_vance', full_name: 'Marcus Vance', username: 'marcusvance', profile_image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80' },
+            'user_marcus_chen': { id: 'user_marcus_chen', full_name: 'Marcus Chen', username: 'marcuschen', profile_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
+            'user_sarah_jenkins': { id: 'user_sarah_jenkins', full_name: 'Sarah Jenkins', username: 'sarahjenkins', profile_image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80' },
+            'user_david_kim': { id: 'user_david_kim', full_name: 'David Kim', username: 'davidkim', profile_image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80' }
+          };
+          profile = curatedMock[queryUserId];
+        }
+
+        if (profile) {
+          const friend = {
+            id: profile.id,
+            name: profile.full_name || profile.username || 'User',
+            username: profile.username || '',
+            avatar: profile.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.username || 'User')}&background=4f46e5&color=fff&size=256`
+          };
+          await openFriendChat(friend);
+          setSearchParams({});
+        }
+      } catch (err) {
+        console.error('Error auto-opening chat:', err);
+      }
+    };
+
+    autoOpen();
+  }, [currentUser, queryUserId]);
 
   // =====================================================
   // LOAD CONVERSATIONS
@@ -757,6 +814,57 @@ const sendMessage = async (e) => {
     setSelectedFile(null);
     setShowEmojiPicker(false);
 
+    // ==========================================
+    // 7. TRIGGERS AUTOMATIC GEMINI AI RESPONDER IF ACTIVE CHAT IS GEMINI
+    // ==========================================
+    if (activeChat?.user?.id === 'user_gemini_ai') {
+      setTimeout(async () => {
+        try {
+          const chatHistory = [...messages, data].map(msg => ({
+            sender: msg.sender_id === currentUser.id ? 'me' : 'them',
+            text: msg.content.startsWith('[IMAGE]:') || msg.content.startsWith('[FILE]:')
+              ? 'Attached file/image prompt: ' + (msg.content.includes('[CAPTION]:') ? msg.content.split('[CAPTION]:')[1] : 'No caption')
+              : msg.content
+          }));
+
+          const responseText = await chatWithGemini(chatHistory);
+
+          const { data: aiData, error: aiError } = await supabase
+            .from('messages')
+            .insert({
+              conversation_id: activeChat.id,
+              sender_id: 'user_gemini_ai',
+              content: responseText,
+              message_type: 'text',
+              is_seen: false,
+            })
+            .select()
+            .single();
+
+          if (!aiError && aiData) {
+            setMessages((previous) => {
+              if (previous.some((m) => m.id === aiData.id)) return previous;
+              return [...previous, aiData];
+            });
+
+            setConversations((previous) =>
+              previous.map((chat) =>
+                chat.id === activeChat.id
+                  ? {
+                      ...chat,
+                      lastMessage: responseText,
+                      lastMessageTime: aiData.created_at,
+                    }
+                  : chat
+              )
+            );
+          }
+        } catch (err) {
+          console.error('AI response error:', err);
+        }
+      }, 800);
+    }
+
   } catch (err) {
     console.error(
       'Send error:',
@@ -1292,7 +1400,14 @@ const sendMessage = async (e) => {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
 
-                <div className="relative shrink-0">
+                <div 
+                  onClick={() => {
+                    if (activeChat.user.id) {
+                      navigate(`/profile/${activeChat.user.id}`);
+                    }
+                  }}
+                  className="relative shrink-0 cursor-pointer hover:opacity-85 transition-opacity"
+                >
                   {getAvatar(activeChat.user, 'md')}
 
                   {activeChat.user.online && (
@@ -1300,8 +1415,15 @@ const sendMessage = async (e) => {
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-bold text-base truncate">
+                <div 
+                  onClick={() => {
+                    if (activeChat.user.id) {
+                      navigate(`/profile/${activeChat.user.id}`);
+                    }
+                  }}
+                  className="flex-1 min-w-0 cursor-pointer group"
+                >
+                  <h2 className="font-bold text-base truncate group-hover:text-indigo-400 transition-colors">
                     {activeChat.user.name}
                   </h2>
 
@@ -1455,7 +1577,16 @@ const sendMessage = async (e) => {
                           >
                             {!mine &&
                               (showAvatar ? (
-                                getAvatar(activeChat.user, 'sm')
+                                <div 
+                                  onClick={() => {
+                                    if (activeChat.user.id) {
+                                      navigate(`/profile/${activeChat.user.id}`);
+                                    }
+                                  }}
+                                  className="cursor-pointer hover:opacity-85 transition-opacity shrink-0"
+                                >
+                                  {getAvatar(activeChat.user, 'sm')}
+                                </div>
                               ) : (
                                 <div className="w-9 shrink-0" />
                               ))}
@@ -1525,7 +1656,14 @@ const sendMessage = async (e) => {
                                   )}
                                 </span>
                                 {mine && (
-                                  <CheckCheck className="w-3.5 h-3.5 text-indigo-500" />
+                                  <CheckCheck 
+                                    className={`w-3.5 h-3.5 ${
+                                      message.is_seen || activeChat?.user?.id === 'user_gemini_ai'
+                                        ? 'text-sky-400' 
+                                        : 'text-slate-500'
+                                    }`} 
+                                    title={message.is_seen || activeChat?.user?.id === 'user_gemini_ai' ? 'Seen' : 'Delivered'}
+                                  />
                                 )}
                               </div>
                             </div>

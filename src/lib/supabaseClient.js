@@ -21,6 +21,18 @@ if (hasValidCredentials) {
 
   // Seeding default LocalStorage data if missing
   const seedLocalStorage = () => {
+    if (!localStorage.getItem('nexus_db_cleaned_v2')) {
+      localStorage.removeItem('nexus_db_posts');
+      localStorage.removeItem('nexus_db_friend_requests');
+      localStorage.removeItem('nexus_db_conversations');
+      localStorage.removeItem('nexus_db_conversation_members');
+      localStorage.removeItem('nexus_db_messages');
+      localStorage.removeItem('nexus_db_likes');
+      localStorage.removeItem('nexus_db_comments');
+      localStorage.removeItem('nexus_db_notifications');
+      localStorage.setItem('nexus_db_cleaned_v2', 'true');
+    }
+
     const defaultData = {
       profiles: [
         {
@@ -62,61 +74,26 @@ if (hasValidCredentials) {
           bio: 'Digital Artist & Illustrator. Dreaming in neon colors.',
           location: 'New York, NY',
           created_at: '2025-03-01T14:45:00Z',
-        }
-      ],
-      posts: [
-        {
-          id: 'post_1',
-          user_id: 'user_1',
-          content: 'Just finished designing the new dark mode system for the design team. What do you think about these high-contrast accents?',
-          image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80',
-          created_at: '2026-09-22T08:00:00Z',
         },
         {
-          id: 'post_2',
-          user_id: 'user_2',
-          content: 'Exploring some React 19 features today. Server Actions are incredibly powerful! Re-architecting our form-handling state is so much simpler now.',
-          image_url: null,
-          created_at: '2026-09-21T18:30:00Z',
-        },
-        {
-          id: 'post_3',
-          user_id: 'user_3',
-          content: "Here is my latest digital paint piece 'Lost in the Neon Sea'. Swipe to see the details of the brush strokes!",
-          image_url: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=1000&q=80',
-          created_at: '2026-09-22T10:15:00Z',
+          id: 'user_gemini_ai',
+          username: 'gemini_ai',
+          full_name: 'Gemini AI Assistant',
+          profile_image: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=150&h=150&q=80',
+          cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+          bio: 'Official Nexus AI Companion. Ask me anything, generate images or chat!',
+          location: 'Google AI Studio',
+          created_at: '2026-09-22T00:00:00Z',
         }
       ],
-      likes: [
-        { id: 'like_1', post_id: 'post_1', user_id: 'user_2' },
-        { id: 'like_2', post_id: 'post_3', user_id: 'user_1' }
-      ],
-      comments: [
-        { id: 'comment_1', post_id: 'post_1', user_id: 'user_2', content: 'This looks gorgeous! The neon purple pops perfectly against the dark background.', created_at: '2026-09-22T08:30:00Z' },
-        { id: 'comment_2', post_id: 'post_1', user_id: 'user_3', content: 'Stunning colors! Love the subtle glow effects.', created_at: '2026-09-22T09:00:00Z' },
-        { id: 'comment_3', post_id: 'post_2', user_id: 'user_1', content: 'Absolutely agree, form handling has always been a pain and this makes it a breeze.', created_at: '2026-09-21T19:00:00Z' }
-      ],
-      conversations: [
-        { id: 'conv_1', created_at: '2026-09-20T10:00:00Z' },
-        { id: 'conv_2', created_at: '2026-09-20T11:00:00Z' }
-      ],
-      conversation_members: [
-        { conversation_id: 'conv_1', user_id: 'me' },
-        { conversation_id: 'conv_1', user_id: 'user_1' },
-        { conversation_id: 'conv_2', user_id: 'me' },
-        { conversation_id: 'conv_2', user_id: 'user_2' }
-      ],
-      messages: [
-        { id: 'msg_1', conversation_id: 'conv_1', sender_id: 'user_1', content: 'Hey! Loved your latest post. Are you free to check some wireframes today?', created_at: '2026-09-22T12:00:00Z' },
-        { id: 'msg_2', conversation_id: 'conv_2', sender_id: 'user_2', content: 'Hey mate, did you see the new update for Vite? It compiles incredibly fast.', created_at: '2026-09-22T11:30:00Z' }
-      ],
-      friend_requests: [
-        { id: 'req_1', sender_id: 'user_3', receiver_id: 'me', status: 'pending', created_at: '2026-09-22T11:00:00Z' }
-      ],
-      notifications: [
-        { id: 'notif_1', user_id: 'me', type: 'friend_request', reference_id: 'req_1', is_read: false, created_at: '2026-09-22T11:00:00Z' },
-        { id: 'notif_2', user_id: 'me', type: 'message', reference_id: 'msg_1', is_read: false, created_at: '2026-09-22T12:00:00Z' }
-      ]
+      posts: [],
+      likes: [],
+      comments: [],
+      conversations: [],
+      conversation_members: [],
+      messages: [],
+      friend_requests: [],
+      notifications: []
     };
 
     Object.entries(defaultData).forEach(([key, val]) => {
@@ -394,6 +371,34 @@ if (hasValidCredentials) {
         setAuthSession(null);
         authListeners.forEach((cb) => cb('SIGNED_OUT', null));
         return { error: null };
+      }
+    },
+    storage: {
+      from(bucketName) {
+        return {
+          async upload(filePath, file, options) {
+            console.log(`[Mock Storage] Uploading file to bucket: ${bucketName}, path: ${filePath}`);
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUrl = event.target?.result;
+                const mockFiles = JSON.parse(localStorage.getItem('nexus_mock_storage') || '{}');
+                mockFiles[filePath] = dataUrl;
+                localStorage.setItem('nexus_mock_storage', JSON.stringify(mockFiles));
+                resolve({ data: { path: filePath }, error: null });
+              };
+              reader.onerror = (err) => {
+                resolve({ data: null, error: err });
+              };
+              reader.readAsDataURL(file);
+            });
+          },
+          getPublicUrl(filePath) {
+            const mockFiles = JSON.parse(localStorage.getItem('nexus_mock_storage') || '{}');
+            const dataUrl = mockFiles[filePath] || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80';
+            return { data: { publicUrl: dataUrl } };
+          }
+        };
       }
     },
     from(tableName) {

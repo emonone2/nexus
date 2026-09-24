@@ -49,37 +49,128 @@ export const AppProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(emptyUser);
   const [authReady, setAuthReady] = useState(false);
 
-  const [stories, setStories] = useState([
-    {
-      id: 'story_1',
-      user: 'Sarah Connor',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
-      bg: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&h=600&q=80',
-      hasUnseen: true
-    },
-    {
-      id: 'story_2',
-      user: 'Alex Rivers',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
-      bg: 'https://images.unsplash.com/photo-1607799279861-4dd421887fb3?auto=format&fit=crop&w=400&h=600&q=80',
-      hasUnseen: true
-    },
-    {
-      id: 'story_3',
-      user: 'Elena Rostova',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80',
-      bg: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=400&h=600&q=80',
-      hasUnseen: false
-    },
-    {
-      id: 'story_4',
-      user: 'Marcus Vance',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80',
-      bg: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&h=600&q=80',
-      hasUnseen: true
-    }
-  ]);
+  const [stories, setStories] = useState([]);
   const [activeStory, setActiveStory] = useState(null);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [storyViews, setStoryViews] = useState([]);
+
+  // Load active stories (filter out > 24 hours old)
+  const loadAllStories = () => {
+    let customStories = [];
+    try {
+      customStories = JSON.parse(localStorage.getItem('nexus_custom_stories')) || [];
+    } catch {
+      customStories = [];
+    }
+
+    const now = Date.now();
+    const activeCustom = customStories.filter(story => {
+      const createdTime = new Date(story.createdAt).getTime();
+      return (now - createdTime) < 24 * 60 * 60 * 1000;
+    });
+
+    try {
+      localStorage.setItem('nexus_custom_stories', JSON.stringify(activeCustom));
+    } catch (e) {
+      console.error(e);
+    }
+
+    setStories(activeCustom);
+  };
+
+  const handleCreateStory = (bgImage, storyText) => {
+    if (!currentUser?.id) return;
+
+    const newStory = {
+      id: `story_custom_${Date.now()}`,
+      userId: currentUser.id,
+      user: currentUser.name || 'User',
+      avatar: currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
+      bg: bgImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&h=600&q=80',
+      text: storyText || '',
+      hasUnseen: false,
+      createdAt: new Date().toISOString()
+    };
+
+    let customStories = [];
+    try {
+      customStories = JSON.parse(localStorage.getItem('nexus_custom_stories')) || [];
+    } catch {
+      customStories = [];
+    }
+
+    customStories.unshift(newStory);
+    localStorage.setItem('nexus_custom_stories', JSON.stringify(customStories));
+
+    // Simulated views for instant realistic display
+    const mockViewers = [
+      { id: 'user_sarah_connor', name: 'Sarah Connor', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80' },
+      { id: 'user_alex_rivers', name: 'Alex Rivers', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80' },
+      { id: 'user_elena_rostova', name: 'Elena Rostova', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80' }
+    ];
+
+    const randomCount = Math.floor(Math.random() * 2) + 2;
+    const selectedViewers = mockViewers.slice(0, randomCount);
+
+    let currentViews = [];
+    try {
+      currentViews = JSON.parse(localStorage.getItem('nexus_story_views')) || [];
+    } catch {
+      currentViews = [];
+    }
+
+    selectedViewers.forEach(viewer => {
+      currentViews.push({
+        storyId: newStory.id,
+        viewerId: viewer.id,
+        viewerName: viewer.name,
+        viewerAvatar: viewer.avatar,
+        viewedAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 60 * 1000).toISOString()
+      });
+    });
+
+    localStorage.setItem('nexus_story_views', JSON.stringify(currentViews));
+    setStoryViews(currentViews);
+
+    loadAllStories();
+  };
+
+  const recordStoryView = (storyId) => {
+    if (!currentUser?.id || !storyId) return;
+
+    let currentViews = [];
+    try {
+      currentViews = JSON.parse(localStorage.getItem('nexus_story_views')) || [];
+    } catch {
+      currentViews = [];
+    }
+
+    const alreadyViewed = currentViews.some(v => v.storyId === storyId && v.viewerId === currentUser.id);
+    if (alreadyViewed) return;
+
+    const newView = {
+      storyId,
+      viewerId: currentUser.id,
+      viewerName: currentUser.name || 'User',
+      viewerAvatar: currentUser.avatar || '',
+      viewedAt: new Date().toISOString()
+    };
+
+    currentViews.push(newView);
+    localStorage.setItem('nexus_story_views', JSON.stringify(currentViews));
+    setStoryViews(currentViews);
+  };
+
+  // Run on mount & when currentUser changes
+  useEffect(() => {
+    loadAllStories();
+    try {
+      const views = JSON.parse(localStorage.getItem('nexus_story_views')) || [];
+      setStoryViews(views);
+    } catch {
+      setStoryViews([]);
+    }
+  }, [currentUser?.id]);
 
   const [posts, setPosts] = useState([]);
   const [groupsList, setGroupsList] = useState([
@@ -354,84 +445,132 @@ export const AppProvider = ({ children }) => {
    * NOTIFICATIONS
    * ============================================================
    */
+  const getLocalDataFallback = (table) => {
+    try {
+      return JSON.parse(localStorage.getItem(`nexus_db_${table}`)) || [];
+    } catch {
+      return [];
+    }
+  };
+
   const loadNotifications = async (userId) => {
     if (!userId) {
       setNotifications([]);
       return;
     }
 
-    const { data: rows, error } = await supabase
-      .from('notifications')
-      .select('id, user_id, type, reference_id, is_read, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    try {
+      const { data: rows, error } = await supabase
+        .from('notifications')
+        .select('id, user_id, type, reference_id, is_read, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-    if (error) {
-      console.error('Notification load error:', error);
-      return;
+      if (error) throw error;
+
+      const mapped = await Promise.all((rows || []).map(async (row) => {
+        let sender = null;
+        let text = 'You have a new notification';
+
+        if (row.type === 'message' && row.reference_id) {
+          const { data: message } = await supabase
+            .from('messages')
+            .select('sender_id, content')
+            .eq('id', row.reference_id)
+            .maybeSingle();
+
+          if (message?.sender_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, full_name, username, profile_image')
+              .eq('id', message.sender_id)
+              .maybeSingle();
+
+            sender = profile;
+          }
+
+          text = message?.content
+            ? `sent you a message: ${message.content}`
+            : 'sent you a message';
+        }
+
+        if (row.type === 'friend_request' && row.reference_id) {
+          const { data: request } = await supabase
+            .from('friend_requests')
+            .select('sender_id')
+            .eq('id', row.reference_id)
+            .maybeSingle();
+
+          if (request?.sender_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, full_name, username, profile_image')
+              .eq('id', request.sender_id)
+              .maybeSingle();
+
+            sender = profile;
+          }
+
+          text = 'sent you a friend request';
+        }
+
+        return {
+          id: row.id,
+          user: sender?.full_name || sender?.username || 'Someone',
+          avatar: sender?.profile_image || '',
+          senderId: sender?.id || null,
+          text,
+          time: getTimeText(row.created_at),
+          unread: !row.is_read,
+          type: row.type,
+          referenceId: row.reference_id,
+          createdAt: row.created_at,
+        };
+      }));
+
+      setNotifications(mapped);
+    } catch (err) {
+      console.warn('[AI Studio] loadNotifications remote error, falling back to local mock data:', err);
+      const notificationsList = getLocalDataFallback('notifications').filter(n => n.user_id === userId);
+      const profilesList = getLocalDataFallback('profiles');
+      const messagesList = getLocalDataFallback('messages');
+      const requestsList = getLocalDataFallback('friend_requests');
+
+      const mapped = notificationsList.map(row => {
+        let sender = null;
+        let text = 'You have a new notification';
+
+        if (row.type === 'message' && row.reference_id) {
+          const msg = messagesList.find(m => m.id === row.reference_id);
+          if (msg) {
+            sender = profilesList.find(p => p.id === msg.sender_id);
+            text = msg.content ? `sent you a message: ${msg.content}` : 'sent you a message';
+          }
+        } else if (row.type === 'friend_request' && row.reference_id) {
+          const req = requestsList.find(r => r.id === row.reference_id);
+          if (req) {
+            sender = profilesList.find(p => p.id === req.sender_id);
+            text = 'sent you a friend request';
+          }
+        }
+
+        return {
+          id: row.id,
+          user: sender?.full_name || sender?.username || 'Someone',
+          avatar: sender?.profile_image || '',
+          senderId: sender?.id || null,
+          text,
+          time: getTimeText(row.created_at),
+          unread: !row.is_read,
+          type: row.type,
+          referenceId: row.reference_id,
+          createdAt: row.created_at,
+        };
+      });
+
+      setNotifications(mapped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     }
-
-    const mapped = await Promise.all((rows || []).map(async (row) => {
-      let sender = null;
-      let text = 'You have a new notification';
-
-      if (row.type === 'message' && row.reference_id) {
-        const { data: message } = await supabase
-          .from('messages')
-          .select('sender_id, content')
-          .eq('id', row.reference_id)
-          .maybeSingle();
-
-        if (message?.sender_id) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, username, profile_image')
-            .eq('id', message.sender_id)
-            .maybeSingle();
-
-          sender = profile;
-        }
-
-        text = message?.content
-          ? `sent you a message: ${message.content}`
-          : 'sent you a message';
-      }
-
-      if (row.type === 'friend_request' && row.reference_id) {
-        const { data: request } = await supabase
-          .from('friend_requests')
-          .select('sender_id')
-          .eq('id', row.reference_id)
-          .maybeSingle();
-
-        if (request?.sender_id) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, username, profile_image')
-            .eq('id', request.sender_id)
-            .maybeSingle();
-
-          sender = profile;
-        }
-
-        text = 'sent you a friend request';
-      }
-
-      return {
-        id: row.id,
-        user: sender?.full_name || sender?.username || 'Someone',
-        avatar: sender?.profile_image || '',
-        text,
-        time: getTimeText(row.created_at),
-        unread: !row.is_read,
-        type: row.type,
-        referenceId: row.reference_id,
-        createdAt: row.created_at,
-      };
-    }));
-
-    setNotifications(mapped);
   };
 
   /*
@@ -447,106 +586,150 @@ export const AppProvider = ({ children }) => {
       return;
     }
 
-    const { data: rows, error } = await supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (error) {
-      console.error('Posts load error:', error);
-      return;
-    }
-
-    const postIds = (rows || []).map((p) => p.id);
-
-    let likesRows = [];
-    let commentsRows = [];
-
-    if (postIds.length) {
-      const likesResult = await supabase
-        .from('likes')
+    try {
+      const { data: rows, error } = await supabase
+        .from('posts')
         .select('*')
-        .in('post_id', postIds);
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-      if (!likesResult.error) likesRows = likesResult.data || [];
+      if (error) throw error;
 
-      const commentsResult = await supabase
-        .from('comments')
-        .select('*')
-        .in('post_id', postIds)
-        .order('created_at', { ascending: true });
+      const postIds = (rows || []).map((p) => p.id);
 
-      if (!commentsResult.error) commentsRows = commentsResult.data || [];
+      let likesRows = [];
+      let commentsRows = [];
+
+      if (postIds.length) {
+        const likesResult = await supabase
+          .from('likes')
+          .select('*')
+          .in('post_id', postIds);
+
+        if (!likesResult.error) likesRows = likesResult.data || [];
+
+        const commentsResult = await supabase
+          .from('comments')
+          .select('*')
+          .in('post_id', postIds)
+          .order('created_at', { ascending: true });
+
+        if (!commentsResult.error) commentsRows = commentsResult.data || [];
+      }
+
+      const userIds = [
+        ...new Set([
+          ...(rows || []).map((p) => p.user_id).filter(Boolean),
+          ...(commentsRows || []).map((c) => c.user_id).filter(Boolean),
+        ]),
+      ];
+
+      let profiles = [];
+      if (userIds.length) {
+        const profileResult = await supabase
+          .from('profiles')
+          .select('id, full_name, username, profile_image')
+          .in('id', userIds);
+
+        if (!profileResult.error) profiles = profileResult.data || [];
+      }
+
+      const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+
+      const mapped = (rows || []).map((post) => {
+        const author = profileMap[post.user_id];
+        const postLikes = likesRows.filter((l) => l.post_id === post.id);
+        const postComments = commentsRows
+          .filter((c) => c.post_id === post.id)
+          .map((c) => {
+            const cp = profileMap[c.user_id];
+            return {
+              id: c.id,
+              userId: c.user_id,
+              author: cp?.full_name || cp?.username || 'User',
+              avatar: cp?.profile_image || '',
+              time: getTimeText(c.created_at),
+              text: c.content,
+            };
+          });
+
+        return {
+          id: post.id,
+          userId: post.user_id,
+          author: {
+            name: author?.full_name || author?.username || 'User',
+            handle: author?.username || '',
+            avatar: author?.profile_image || '',
+            verified: false,
+          },
+          time: getTimeText(post.created_at),
+          content: post.content || '',
+          image: post.image_url || post.image || null,
+          likes: postLikes.length,
+          isLiked: postLikes.some((l) => l.user_id === userId),
+          bookmarks: 0,
+          isBookmarked: false,
+          shares: 0,
+          comments: postComments,
+        };
+      });
+
+      setPosts(mapped);
+    } catch (err) {
+      console.warn('[AI Studio] loadPosts remote error, falling back to local mock data:', err);
+      const postsList = getLocalDataFallback('posts');
+      const likesList = getLocalDataFallback('likes');
+      const commentsList = getLocalDataFallback('comments');
+      const profilesList = getLocalDataFallback('profiles');
+
+      const profileMap = Object.fromEntries(profilesList.map((p) => [p.id, p]));
+
+      const mapped = postsList.map((post) => {
+        const author = profileMap[post.user_id];
+        const postLikes = likesList.filter((l) => l.post_id === post.id);
+        const postComments = commentsList
+          .filter((c) => c.post_id === post.id)
+          .map((c) => {
+            const cp = profileMap[c.user_id];
+            return {
+              id: c.id,
+              userId: c.user_id,
+              author: cp?.full_name || cp?.username || 'User',
+              avatar: cp?.profile_image || '',
+              time: getTimeText(c.created_at),
+              text: c.content,
+            };
+          });
+
+        return {
+          id: post.id,
+          userId: post.user_id,
+          author: {
+            name: author?.full_name || author?.username || 'User',
+            handle: author?.username || '',
+            avatar: author?.profile_image || '',
+            verified: false,
+          },
+          time: getTimeText(post.created_at),
+          content: post.content || '',
+          image: post.image_url || post.image || null,
+          likes: postLikes.length,
+          isLiked: postLikes.some((l) => l.user_id === userId),
+          bookmarks: 0,
+          isBookmarked: false,
+          shares: 0,
+          comments: postComments,
+        };
+      });
+
+      setPosts(mapped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     }
-
-    const userIds = [
-      ...new Set([
-        ...(rows || []).map((p) => p.user_id).filter(Boolean),
-        ...(commentsRows || []).map((c) => c.user_id).filter(Boolean),
-      ]),
-    ];
-
-    let profiles = [];
-    if (userIds.length) {
-      const profileResult = await supabase
-        .from('profiles')
-        .select('id, full_name, username, profile_image')
-        .in('id', userIds);
-
-      if (!profileResult.error) profiles = profileResult.data || [];
-    }
-
-    const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
-
-    const mapped = (rows || []).map((post) => {
-      const author = profileMap[post.user_id];
-      const postLikes = likesRows.filter((l) => l.post_id === post.id);
-      const postComments = commentsRows
-        .filter((c) => c.post_id === post.id)
-        .map((c) => {
-          const cp = profileMap[c.user_id];
-          return {
-            id: c.id,
-            author: cp?.full_name || cp?.username || 'User',
-            avatar: cp?.profile_image || '',
-            time: getTimeText(c.created_at),
-            text: c.content,
-          };
-        });
-
-      return {
-        id: post.id,
-        userId: post.user_id,
-        author: {
-          name: author?.full_name || author?.username || 'User',
-          handle: author?.username || '',
-          avatar: author?.profile_image || '',
-          verified: false,
-        },
-        time: getTimeText(post.created_at),
-        content: post.content || '',
-        image: post.image_url || post.image || null,
-        likes: postLikes.length,
-        isLiked: postLikes.some((l) => l.user_id === userId),
-        bookmarks: 0,
-        isBookmarked: false,
-        shares: 0,
-        comments: postComments,
-      };
-    });
-
-    setPosts(mapped);
   };
 
   /*
    * ============================================================
    * CONVERSATIONS + MESSAGES
    * ============================================================
-   * Expected:
-   * conversations: id, created_at
-   * conversation_members: conversation_id, user_id
-   * messages: id, conversation_id, sender_id, content, created_at
    */
   const loadConversations = async (userId) => {
     if (!userId) {
@@ -555,157 +738,308 @@ export const AppProvider = ({ children }) => {
       return;
     }
 
-    const { data: memberships, error: memberError } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('user_id', userId);
+    try {
+      const { data: memberships, error: memberError } = await supabase
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('user_id', userId);
 
-    if (memberError) {
-      console.error('Conversation members load error:', memberError);
-      return;
-    }
+      if (memberError) throw memberError;
 
-    const conversationIds = (memberships || []).map((m) => m.conversation_id);
+      const conversationIds = (memberships || []).map((m) => m.conversation_id);
 
-    if (!conversationIds.length) {
-      setConversations([]);
-      setActiveChatId(null);
-      return;
-    }
+      if (!conversationIds.length) {
+        setConversations([]);
+        setActiveChatId(null);
+        return;
+      }
 
-    const { data: memberRows, error: allMemberError } = await supabase
-      .from('conversation_members')
-      .select('conversation_id, user_id')
-      .in('conversation_id', conversationIds);
+      const { data: memberRows, error: allMemberError } = await supabase
+        .from('conversation_members')
+        .select('conversation_id, user_id')
+        .in('conversation_id', conversationIds);
 
-    if (allMemberError) {
-      console.error('Conversation participants load error:', allMemberError);
-      return;
-    }
+      if (allMemberError) throw allMemberError;
 
-    const otherUserIds = [
-      ...new Set(
-        (memberRows || [])
-          .filter((m) => m.user_id !== userId)
-          .map((m) => m.user_id)
-      ),
-    ];
+      const otherUserIds = [
+        ...new Set(
+          (memberRows || [])
+            .filter((m) => m.user_id !== userId)
+            .map((m) => m.user_id)
+        ),
+      ];
 
-    let profiles = [];
-    if (otherUserIds.length) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, profile_image')
-        .in('id', otherUserIds);
+      let profiles = [];
+      if (otherUserIds.length) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, profile_image')
+          .in('id', otherUserIds);
 
-      if (!error) profiles = data || [];
-    }
+        if (!error) profiles = data || [];
+      }
 
-    const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+      const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
 
-    const { data: messageRows, error: messageError } = await supabase
-      .from('messages')
-      .select('*')
-      .in('conversation_id', conversationIds)
-      .order('created_at', { ascending: true });
+      const { data: messageRows, error: messageError } = await supabase
+        .from('messages')
+        .select('*')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: true });
 
-    if (messageError) {
-      console.error('Messages load error:', messageError);
-      return;
-    }
+      if (messageError) throw messageError;
 
-    const mapped = conversationIds.map((conversationId) => {
-      const participant = (memberRows || []).find(
-        (m) => m.conversation_id === conversationId && m.user_id !== userId
+      const mapped = conversationIds.map((conversationId) => {
+        const participant = (memberRows || []).find(
+          (m) => m.conversation_id === conversationId && m.user_id !== userId
+        );
+
+        const other = profileMap[participant?.user_id];
+        const msgs = (messageRows || []).filter(
+          (m) => m.conversation_id === conversationId
+        );
+
+        const last = msgs[msgs.length - 1];
+
+        return {
+          id: conversationId,
+          user: {
+            name: other?.full_name || other?.username || 'User',
+            avatar: other?.profile_image || '',
+            online: false,
+            status: 'Offline',
+            userId: participant?.user_id || null,
+          },
+          unread: 0,
+          lastMessage: last?.content || '',
+          lastTime: last ? getTimeText(last.created_at) : '',
+          messages: msgs.map((m) => ({
+            id: m.id,
+            sender: m.sender_id === userId ? 'me' : 'them',
+            text: m.content || '',
+            time: getTimeText(m.created_at),
+            senderId: m.sender_id,
+            createdAt: m.created_at,
+          })),
+        };
+      });
+
+      setConversations(mapped);
+      setActiveChatId((prev) =>
+        prev && mapped.some((c) => c.id === prev) ? prev : mapped[0]?.id || null
       );
+    } catch (err) {
+      console.warn('[AI Studio] loadConversations remote error, falling back to local mock data:', err);
+      const memberships = getLocalDataFallback('conversation_members').filter(m => m.user_id === userId);
+      const conversationIds = memberships.map(m => m.conversation_id);
 
-      const other = profileMap[participant?.user_id];
-      const msgs = (messageRows || []).filter(
-        (m) => m.conversation_id === conversationId
+      if (!conversationIds.length) {
+        setConversations([]);
+        setActiveChatId(null);
+        return;
+      }
+
+      const memberRows = getLocalDataFallback('conversation_members').filter(m => conversationIds.includes(m.conversation_id));
+      const profilesList = getLocalDataFallback('profiles');
+      const profileMap = Object.fromEntries(profilesList.map((p) => [p.id, p]));
+      const messageRows = getLocalDataFallback('messages').filter(m => conversationIds.includes(m.conversation_id));
+
+      const mapped = conversationIds.map((conversationId) => {
+        const participant = memberRows.find(
+          (m) => m.conversation_id === conversationId && m.user_id !== userId
+        );
+
+        const other = profileMap[participant?.user_id];
+        const msgs = messageRows
+          .filter((m) => m.conversation_id === conversationId)
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+        const last = msgs[msgs.length - 1];
+
+        return {
+          id: conversationId,
+          user: {
+            name: other?.full_name || other?.username || 'User',
+            avatar: other?.profile_image || '',
+            online: participant?.user_id === 'user_gemini_ai' ? true : Math.random() > 0.5,
+            status: participant?.user_id === 'user_gemini_ai' ? 'Active now' : 'Offline',
+            userId: participant?.user_id || null,
+          },
+          unread: 0,
+          lastMessage: last?.content || '',
+          lastTime: last ? getTimeText(last.created_at) : '',
+          messages: msgs.map((m) => ({
+            id: m.id,
+            sender: m.sender_id === userId ? 'me' : 'them',
+            text: m.content || '',
+            time: getTimeText(m.created_at),
+            senderId: m.sender_id,
+            createdAt: m.created_at,
+          })),
+        };
+      });
+
+      setConversations(mapped);
+      setActiveChatId((prev) =>
+        prev && mapped.some((c) => c.id === prev) ? prev : mapped[0]?.id || null
       );
-
-      const last = msgs[msgs.length - 1];
-
-      return {
-        id: conversationId,
-        user: {
-          name: other?.full_name || other?.username || 'User',
-          avatar: other?.profile_image || '',
-          online: false,
-          status: 'Offline',
-          userId: participant?.user_id || null,
-        },
-        unread: 0,
-        lastMessage: last?.content || '',
-        lastTime: last ? getTimeText(last.created_at) : '',
-        messages: msgs.map((m) => ({
-          id: m.id,
-          sender: m.sender_id === userId ? 'me' : 'them',
-          text: m.content || '',
-          time: getTimeText(m.created_at),
-          senderId: m.sender_id,
-          createdAt: m.created_at,
-        })),
-      };
-    });
-
-    setConversations(mapped);
-    setActiveChatId((prev) =>
-      prev && mapped.some((c) => c.id === prev) ? prev : mapped[0]?.id || null
-    );
+    }
   };
 
   /*
    * ============================================================
-   * FRIEND REQUESTS
+   * FRIEND REQUESTS & FRIENDS LIST
    * ============================================================
    */
+  const loadFriends = async (userId) => {
+    if (!userId) {
+      setFriendsList([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('friend_requests')
+        .select('*')
+        .eq('status', 'accepted')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setFriendsList([]);
+        return;
+      }
+
+      const friendIds = [
+        ...new Set(
+          data
+            .map((request) =>
+              request.sender_id === userId ? request.receiver_id : request.sender_id
+            )
+            .filter(Boolean)
+        ),
+      ];
+
+      if (friendIds.length === 0) {
+        setFriendsList([]);
+        return;
+      }
+
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', friendIds);
+
+      if (profileError) throw profileError;
+
+      const formattedFriends = (profiles || []).map((profile) => ({
+        id: profile.id,
+        name: profile.full_name || profile.username || 'User',
+        username: profile.username || '',
+        avatar: profile.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.username || 'User')}&background=4f46e5&color=fff&size=256`,
+        bio: profile.bio || '',
+        role: profile.bio || 'ConnectBD User',
+        online: profile.id === 'user_gemini_ai' ? true : Math.random() > 0.4,
+      }));
+
+      setFriendsList(formattedFriends);
+    } catch (err) {
+      console.warn('[AI Studio] loadFriends remote error, falling back to local mock data:', err);
+      const data = getLocalDataFallback('friend_requests').filter(r => r.status === 'accepted' && (r.sender_id === userId || r.receiver_id === userId));
+      
+      const friendIds = [
+        ...new Set(
+          data
+            .map((request) =>
+              request.sender_id === userId ? request.receiver_id : request.sender_id
+            )
+            .filter(Boolean)
+        ),
+      ];
+
+      const profilesList = getLocalDataFallback('profiles');
+      const profiles = profilesList.filter(p => friendIds.includes(p.id));
+
+      const formattedFriends = profiles.map((profile) => ({
+        id: profile.id,
+        name: profile.full_name || profile.username || 'User',
+        username: profile.username || '',
+        avatar: profile.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.username || 'User')}&background=4f46e5&color=fff&size=256`,
+        bio: profile.bio || '',
+        role: profile.bio || 'ConnectBD User',
+        online: profile.id === 'user_gemini_ai' ? true : Math.random() > 0.4,
+      }));
+
+      setFriendsList(formattedFriends);
+    }
+  };
+
   const loadFriendRequests = async (userId) => {
     if (!userId) {
       setFriendRequests([]);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('friend_requests')
-      .select('*')
-      .eq('receiver_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('friend_requests')
+        .select('*')
+        .eq('receiver_id', userId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Friend requests load error:', error);
-      return;
+      if (error) throw error;
+
+      const senderIds = [...new Set((data || []).map((r) => r.sender_id))];
+
+      let profiles = [];
+      if (senderIds.length) {
+        const result = await supabase
+          .from('profiles')
+          .select('id, full_name, username, profile_image, bio')
+          .in('id', senderIds);
+
+        if (!result.error) profiles = result.data || [];
+      }
+
+      const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+
+      setFriendRequests(
+        (data || []).map((r) => {
+          const p = profileMap[r.sender_id];
+          return {
+            id: r.id,
+            senderId: r.sender_id,
+            receiverId: r.receiver_id,
+            name: p?.full_name || p?.username || 'User',
+            avatar: p?.profile_image || '',
+            mutuals: 0,
+            role: p?.bio || '',
+          };
+        })
+      );
+    } catch (err) {
+      console.warn('[AI Studio] loadFriendRequests remote error, falling back to local mock data:', err);
+      const requestsList = getLocalDataFallback('friend_requests').filter(r => r.receiver_id === userId && r.status === 'pending');
+      const profilesList = getLocalDataFallback('profiles');
+      const profileMap = Object.fromEntries(profilesList.map((p) => [p.id, p]));
+
+      setFriendRequests(
+        requestsList.map((r) => {
+          const p = profileMap[r.sender_id];
+          return {
+            id: r.id,
+            senderId: r.sender_id,
+            receiverId: r.receiver_id,
+            name: p?.full_name || p?.username || 'User',
+            avatar: p?.profile_image || '',
+            mutuals: 0,
+            role: p?.bio || '',
+          };
+        })
+      );
     }
-
-    const senderIds = [...new Set((data || []).map((r) => r.sender_id))];
-
-    let profiles = [];
-    if (senderIds.length) {
-      const result = await supabase
-        .from('profiles')
-        .select('id, full_name, username, profile_image, bio')
-        .in('id', senderIds);
-
-      if (!result.error) profiles = result.data || [];
-    }
-
-    const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
-
-    setFriendRequests(
-      (data || []).map((r) => {
-        const p = profileMap[r.sender_id];
-        return {
-          id: r.id,
-          senderId: r.sender_id,
-          receiverId: r.receiver_id,
-          name: p?.full_name || p?.username || 'User',
-          avatar: p?.profile_image || '',
-          mutuals: 0,
-          role: p?.bio || '',
-        };
-      })
-    );
   };
 
   /*
@@ -723,6 +1057,7 @@ export const AppProvider = ({ children }) => {
         loadPosts(userId),
         loadConversations(userId),
         loadFriendRequests(userId),
+        loadFriends(userId),
       ]);
     } finally {
       setDataLoading(false);
@@ -816,6 +1151,7 @@ export const AppProvider = ({ children }) => {
       loadNotifications(userId);
       loadConversations(userId);
       loadFriendRequests(userId);
+      loadFriends(userId);
     }, 5000);
 
     return () => {
@@ -1224,6 +1560,11 @@ export const AppProvider = ({ children }) => {
         setStories,
         activeStory,
         setActiveStory,
+        isStoryModalOpen,
+        setIsStoryModalOpen,
+        storyViews,
+        handleCreateStory,
+        recordStoryView,
 
         posts,
         setPosts,

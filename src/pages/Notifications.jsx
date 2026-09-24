@@ -8,11 +8,13 @@ import {
   Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function Notifications() {
   const { notifications, handleMarkAllNotificationsRead, handleMarkNotificationRead } = useApp();
   const [activeTab, setActiveTab] = useState('all');
+  const navigate = useNavigate();
 
   const filteredNotifs = notifications.filter(n => {
     if (activeTab === 'likes') return n.text.toLowerCase().includes('liked');
@@ -85,9 +87,19 @@ export default function Notifications() {
                   }`}
                 >
                   {/* Notification Badge Badge Icon */}
-                  <div className="relative">
-                    <img src={n.avatar} alt={n.user} className="w-12 h-12 rounded-xl object-cover ring-2 ring-indigo-500/10" />
-                    <span className="absolute -bottom-1 -right-1 w-5.5 h-5.5 rounded-full bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-center text-[10px] ring-2 ring-white dark:ring-slate-900 shadow-md">
+                  <div className="relative shrink-0">
+                    <img 
+                      src={n.avatar} 
+                      alt={n.user} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (n.senderId) {
+                          navigate(`/profile/${n.senderId}`);
+                        }
+                      }}
+                      className="w-12 h-12 rounded-xl object-cover ring-2 ring-indigo-500/10 cursor-pointer hover:opacity-85 transition-opacity" 
+                    />
+                    <span className="absolute -bottom-1 -right-1 w-5.5 h-5.5 rounded-full bg-slate-950 text-white flex items-center justify-center text-[10px] ring-2 ring-white dark:ring-slate-900 shadow-md">
                       {n.text.toLowerCase().includes('liked') ? '❤️' : '💬'}
                     </span>
                   </div>
@@ -95,7 +107,17 @@ export default function Notifications() {
                   {/* Text Content */}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-normal font-medium">
-                      <span className="font-extrabold text-slate-900 dark:text-slate-100 font-['Outfit']">@{n.user}</span> {n.text}
+                      <span 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (n.senderId) {
+                            navigate(`/profile/${n.senderId}`);
+                          }
+                        }}
+                        className="font-extrabold text-slate-900 dark:text-slate-100 font-['Outfit'] hover:text-indigo-500 cursor-pointer transition-colors"
+                      >
+                        @{n.user}
+                      </span> {n.text}
                     </p>
                     <span className="text-[10px] font-bold text-slate-400 mt-1 block uppercase tracking-wider">{n.time}</span>
                   </div>
