@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Image, Smile, Video, Sparkles, Flame, Users, Clock } from 'lucide-react';
+import { Plus, Image, Smile, Video, Sparkles, Flame, Users, Clock, Lightbulb, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import PostCard from '../components/PostCard';
 import CreatePostModal from '../components/CreatePostModal';
 import CreateStoryModal from '../components/CreateStoryModal';
+import { askGemini } from '../lib/geminiService';
 
 export default function Home() {
   const { 
@@ -14,6 +15,7 @@ export default function Home() {
     stories, 
     posts, 
     setIsPostModalOpen, 
+    setPrefilledPostContent,
     searchQuery,
     setActiveStory,
     friendsList,
@@ -22,6 +24,32 @@ export default function Home() {
   } = useApp();
 
   const navigate = useNavigate();
+
+  const [aiIdeas, setAiIdeas] = useState([]);
+  const [loadingIdeas, setLoadingIdeas] = useState(false);
+  const [ideasError, setAiError] = useState('');
+
+  const generateIdeas = async () => {
+    try {
+      setLoadingIdeas(true);
+      setAiError('');
+      const prompt = "Provide exactly 3 short, super trendy, catchy social media post ideas or captions (one about technology/web design/learning, one about morning motivation/inspiration, and one funny/creative/lifestyle caption with emojis and hashtags). Format each idea on a new line starting with '1.', '2.', and '3.' respectively. Do not write any other introductory or concluding text, just the 3 formatted ideas.";
+      const result = await askGemini(prompt, "You are a professional social media creative director and trend spotter. You write ultra-high engaging posts with perfect grammar, cool emojis, and trendy hashtags.");
+      if (result) {
+        const parsed = result
+          .split('\n')
+          .map(line => line.replace(/^\d+[\.\s\-]+/, '').trim())
+          .filter(line => line.length > 10)
+          .slice(0, 3);
+        setAiIdeas(parsed);
+      }
+    } catch (err) {
+      console.error(err);
+      setAiError('Failed to generate post ideas. Please try again.');
+    } finally {
+      setLoadingIdeas(false);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState('all');
   const [friendIds, setFriendIds] = useState([]);
@@ -231,6 +259,90 @@ export default function Home() {
             <span>Feeling / Activity</span>
           </button>
         </div>
+      </div>
+
+      {/* AI Creativity Hub Widget */}
+      <div className="glass-card rounded-3xl p-5 mb-6 border border-indigo-500/10 dark:border-indigo-500/20 shadow-lg shadow-indigo-500/5 bg-gradient-to-tr from-white to-indigo-50/10 dark:from-slate-900/40 dark:to-indigo-950/10">
+        <div className="flex items-center justify-between gap-3 mb-4.5">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
+              <Sparkles className="w-4.5 h-4.5 text-indigo-500" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-['Outfit'] flex items-center gap-1.5">
+                <span>AI Creativity Hub</span>
+                <span className="px-2 py-0.5 bg-gradient-to-r from-indigo-500 to-pink-500 text-white text-[8px] font-extrabold uppercase tracking-widest rounded-full scale-95">Gemini Companion</span>
+              </h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Stuck on what to share? Let Gemini write for you!</p>
+            </div>
+          </div>
+
+          <button
+            onClick={generateIdeas}
+            disabled={loadingIdeas}
+            className="text-[11px] font-extrabold text-indigo-500 hover:text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+          >
+            {loadingIdeas ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5" />
+            )}
+            <span>{aiIdeas.length > 0 ? "Generate New" : "Try Now"}</span>
+          </button>
+        </div>
+
+        {ideasError && (
+          <div className="text-xs text-rose-500 font-bold bg-rose-500/5 border border-rose-500/10 rounded-xl p-2.5 text-center mt-2.5">
+            {ideasError}
+          </div>
+        )}
+
+        {aiIdeas.length === 0 && !loadingIdeas ? (
+          <div className="p-4.5 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/40 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mb-3">
+              Generate 3 trendsetting, custom social media post ideas and templates in one tap!
+            </p>
+            <button
+              onClick={generateIdeas}
+              className="py-2.5 px-5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-indigo-500/10 hover:shadow-lg transition cursor-pointer flex items-center gap-1.5 mx-auto"
+            >
+              <Lightbulb className="w-4 h-4 fill-current" />
+              <span>💡 Suggest 3 Post Captions</span>
+            </button>
+          </div>
+        ) : loadingIdeas ? (
+          <div className="py-10 flex flex-col items-center justify-center gap-2.5">
+            <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs font-bold text-slate-400 tracking-wider uppercase animate-pulse">Gemini is brainstorming ideas...</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {aiIdeas.map((idea, idx) => (
+              <motion.div
+                key={idx}
+                whileHover={{ scale: 1.01, x: 2 }}
+                onClick={() => {
+                  setPrefilledPostContent(idea);
+                  setIsPostModalOpen(true);
+                }}
+                className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/20 hover:bg-indigo-500/5 dark:hover:bg-indigo-500/5 border border-slate-100 dark:border-slate-800/40 hover:border-indigo-500/25 transition-all cursor-pointer flex gap-3 text-left items-start group shadow-inner"
+              >
+                <span className="w-6 h-6 rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-500 text-xs font-extrabold flex items-center justify-center border border-indigo-500/15 shrink-0 select-none group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300">
+                  {idx + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-semibold pr-2 select-all">
+                    "{idea}"
+                  </p>
+                  <div className="mt-2 text-[10px] text-indigo-500 group-hover:text-indigo-600 font-extrabold uppercase tracking-wider flex items-center gap-1 select-none">
+                    <span>✨ Tap to use this caption template</span>
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 3. Feed Navigation Filter Tabs */}

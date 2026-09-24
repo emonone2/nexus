@@ -275,6 +275,7 @@ export const AppProvider = ({ children }) => {
   ]);
 
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [prefilledPostContent, setPrefilledPostContent] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [dataLoading, setDataLoading] = useState(false);
@@ -369,43 +370,38 @@ export const AppProvider = ({ children }) => {
 
     // Load the session that already exists when the app starts.
     const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        if (error) {
-          console.error('Initial auth session error:', error);
-          ++authLoadVersionRef.current;
-          authUserIdRef.current = null;
-          clearAccountState();
-          return;
-        }
-
-        const user = session?.user || null;
-        const version = ++authLoadVersionRef.current;
-
-        if (!user) {
-          authUserIdRef.current = null;
-          clearAccountState();
-          return;
-        }
-
-        authUserIdRef.current = user.id;
-        setAuthReady(false);
-        setCurrentUser(emptyUser);
-        setPosts([]);
-        setConversations([]);
-        setFriendRequests([]);
-        setFriendsList([]);
-        setNotifications([]);
-        setActiveChatId(null);
-
-        await loadUserById(user, version);
-      } catch (err) {
-        console.error('initializeAuth exception:', err);
-        if (mounted) clearAccountState();
+      if (error) {
+        console.error('Initial auth session error:', error);
+        ++authLoadVersionRef.current;
+        authUserIdRef.current = null;
+        clearAccountState();
+        return;
       }
+
+      const user = session?.user || null;
+      const version = ++authLoadVersionRef.current;
+
+      if (!user) {
+        authUserIdRef.current = null;
+        clearAccountState();
+        return;
+      }
+
+      authUserIdRef.current = user.id;
+      setAuthReady(false);
+      setCurrentUser(emptyUser);
+      setPosts([]);
+      setConversations([]);
+      setFriendRequests([]);
+      setFriendsList([]);
+      setNotifications([]);
+      setActiveChatId(null);
+
+      await loadUserById(user, version);
     };
 
     initializeAuth();
@@ -1597,6 +1593,8 @@ export const AppProvider = ({ children }) => {
 
         isPostModalOpen,
         setIsPostModalOpen,
+        prefilledPostContent,
+        setPrefilledPostContent,
         searchQuery,
         setSearchQuery,
 

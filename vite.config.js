@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://vite.js.org/config/
 export default defineConfig({
-  base: '/nexus/',
+  base: '/',
   plugins: [react(), tailwindcss()],
   server: {
     host: '0.0.0.0',

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import { askGemini } from '../lib/geminiService';
 
 export default function PostCard({ post }) {
   const { handleLikePost, handleBookmarkPost, handleAddComment, currentUser } = useApp();
@@ -26,6 +27,11 @@ export default function PostCard({ post }) {
 
   // Floating Heart Particle Reactions State
   const [heartBursts, setHeartBursts] = useState([]);
+
+  // AI Translation & Explanation states
+  const [aiResult, setAiResult] = useState('');
+  const [loadingAi, setLoadingAi] = useState(false);
+  const [showAiOptions, setShowAiOptions] = useState(false);
 
   // Parse Serialized Mood & Background Gradients
   let postText = post.content;
@@ -153,6 +159,116 @@ export default function PostCard({ post }) {
             className="w-full max-h-[480px] object-cover group-hover:scale-[1.01] transition-transform duration-500"
           />
           <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        </div>
+      )}
+
+      {/* AI Translate / Explain Result Panel */}
+      {aiResult && (
+        <motion.div 
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 relative"
+        >
+          <button 
+            onClick={() => setAiResult('')}
+            className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 flex items-center justify-center text-[10px] font-bold transition cursor-pointer"
+          >
+            ✕
+          </button>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 font-['Outfit'] uppercase tracking-wider flex items-center gap-1">
+              ✨ Gemini AI Translation / Summary
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-semibold">
+            {aiResult}
+          </p>
+        </motion.div>
+      )}
+
+      {/* AI Translate & Options dropdown trigger */}
+      {postText && (
+        <div className="flex items-center justify-between mb-4 px-1">
+          <button
+            onClick={() => setShowAiOptions(!showAiOptions)}
+            className="text-[10px] sm:text-xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1.5 transition-all cursor-pointer select-none"
+          >
+            <span>✨ AI Translate & Explain</span>
+          </button>
+
+          {showAiOptions && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-850 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-800/60 shadow-sm"
+            >
+              <button
+                disabled={loadingAi}
+                onClick={async () => {
+                  try {
+                    setLoadingAi(true);
+                    setShowAiOptions(false);
+                    const prompt = `Translate the following social media post text into pure, conversational, standard Bengali. Do not write any other explanation or text, just the Bengali translation: "${postText}"`;
+                    const res = await askGemini(prompt, "You are a professional English-to-Bengali translator.");
+                    setAiResult(res);
+                  } catch (e) {
+                    setAiResult("Translation failed. Try again.");
+                  } finally {
+                    setLoadingAi(false);
+                  }
+                }}
+                className="px-2 py-1 hover:bg-white dark:hover:bg-slate-900 rounded-lg text-[9px] font-black text-slate-700 dark:text-slate-300 transition-all uppercase cursor-pointer"
+              >
+                🇧🇩 Bengali
+              </button>
+              <span className="text-slate-200 dark:text-slate-700">|</span>
+              <button
+                disabled={loadingAi}
+                onClick={async () => {
+                  try {
+                    setLoadingAi(true);
+                    setShowAiOptions(false);
+                    const prompt = `Translate the following social media post text into pure, natural, fluent English. Do not write any other explanation or text, just the English translation: "${postText}"`;
+                    const res = await askGemini(prompt, "You are a professional Bengali-to-English translator.");
+                    setAiResult(res);
+                  } catch (e) {
+                    setAiResult("Translation failed. Try again.");
+                  } finally {
+                    setLoadingAi(false);
+                  }
+                }}
+                className="px-2 py-1 hover:bg-white dark:hover:bg-slate-900 rounded-lg text-[9px] font-black text-slate-700 dark:text-slate-300 transition-all uppercase cursor-pointer"
+              >
+                🇺🇸 English
+              </button>
+              <span className="text-slate-200 dark:text-slate-700">|</span>
+              <button
+                disabled={loadingAi}
+                onClick={async () => {
+                  try {
+                    setLoadingAi(true);
+                    setShowAiOptions(false);
+                    const prompt = `Explain the hidden context, humor, technical jargon, or summarize this post in a single brief, witty and engaging sentence: "${postText}"`;
+                    const res = await askGemini(prompt, "You are a clever, witty social media assistant who explains tech, coding, design, and general posts with flair.");
+                    setAiResult(res);
+                  } catch (e) {
+                    setAiResult("Explanation failed. Try again.");
+                  } finally {
+                    setLoadingAi(false);
+                  }
+                }}
+                className="px-2 py-1 hover:bg-white dark:hover:bg-slate-900 rounded-lg text-[9px] font-black text-slate-700 dark:text-slate-300 transition-all uppercase cursor-pointer"
+              >
+                💡 Explain
+              </button>
+            </motion.div>
+          )}
+
+          {loadingAi && (
+            <span className="text-[10px] font-extrabold text-indigo-500 animate-pulse uppercase tracking-wider">
+              Gemini translating...
+            </span>
+          )}
         </div>
       )}
 

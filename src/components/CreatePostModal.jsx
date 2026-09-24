@@ -1,13 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Image as ImageIcon, Smile, Globe, Tag, Sparkles, SmilePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { askGemini } from '../lib/geminiService';
 
 export default function CreatePostModal() {
-  const { currentUser, isPostModalOpen, setIsPostModalOpen, handleCreatePost } = useApp();
+  const { 
+    currentUser, 
+    isPostModalOpen, 
+    setIsPostModalOpen, 
+    handleCreatePost,
+    prefilledPostContent,
+    setPrefilledPostContent
+  } = useApp();
   
   const [content, setContent] = useState('');
+  
+  useEffect(() => {
+    if (isPostModalOpen && prefilledPostContent) {
+      setContent(prefilledPostContent);
+      setPrefilledPostContent('');
+    }
+  }, [isPostModalOpen, prefilledPostContent, setPrefilledPostContent]);
   const [imageUrl, setImageUrl] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
   const [aiEnhancing, setAiEnhancing] = useState(false);
