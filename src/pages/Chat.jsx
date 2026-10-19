@@ -36,41 +36,51 @@ export default function Chat() {
   const [currentUser, setCurrentUser] = useState(appUser?.id ? appUser : null);
 
   const [conversations, setConversations] = useState(() => {
+    // Clean up any legacy un-scoped chat cache
     try {
-      const cached = localStorage.getItem('nexus_chat_conversations');
+      localStorage.removeItem('nexus_chat_conversations');
+      localStorage.removeItem('nexus_chat_friends');
+    } catch {}
+
+    if (!appUser?.id) return [];
+    try {
+      const cached = localStorage.getItem(`nexus_chat_conversations_${appUser.id}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return appConversations || [];
+    return (appConversations && appConversations.length > 0) ? appConversations : [];
   });
 
   const [friends, setFriends] = useState(() => {
+    if (!appUser?.id) return [];
     try {
-      const cached = localStorage.getItem('nexus_chat_friends');
+      const cached = localStorage.getItem(`nexus_chat_friends_${appUser.id}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return appFriends || [];
+    return (appFriends && appFriends.length > 0) ? appFriends : [];
   });
 
   const [activeChat, setActiveChat] = useState(() => {
+    if (!appUser?.id) return null;
     try {
-      const cached = localStorage.getItem('nexus_chat_conversations');
+      const cached = localStorage.getItem(`nexus_chat_conversations_${appUser.id}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
       }
     } catch {}
-    return appConversations[0] || null;
+    return (appConversations && appConversations.length > 0) ? appConversations[0] : null;
   });
 
   const [messages, setMessages] = useState(() => {
+    if (!appUser?.id) return [];
     try {
-      const cachedConv = localStorage.getItem('nexus_chat_conversations');
+      const cachedConv = localStorage.getItem(`nexus_chat_conversations_${appUser.id}`);
       if (cachedConv) {
         const parsed = JSON.parse(cachedConv);
         const firstId = parsed[0]?.id;
@@ -215,21 +225,42 @@ export default function Chat() {
   useEffect(() => {
     if (appUser?.id && (!currentUser || currentUser.id !== appUser.id)) {
       setCurrentUser(appUser);
+      try {
+        const userCached = localStorage.getItem(`nexus_chat_conversations_${appUser.id}`);
+        if (userCached) {
+          const parsed = JSON.parse(userCached);
+          setConversations(parsed);
+          setActiveChat(parsed[0] || null);
+        } else {
+          setConversations([]);
+          setActiveChat(null);
+        }
+      } catch {
+        setConversations([]);
+        setActiveChat(null);
+      }
+      setMessages([]);
+    } else if (!appUser?.id) {
+      setCurrentUser(null);
+      setConversations([]);
+      setFriends([]);
+      setActiveChat(null);
+      setMessages([]);
     }
   }, [appUser]);
 
   useEffect(() => {
-    if (conversations.length === 0 && appConversations.length > 0) {
+    if (currentUser?.id && conversations.length === 0 && appConversations.length > 0) {
       setConversations(appConversations);
       if (!activeChat) setActiveChat(appConversations[0]);
     }
-  }, [appConversations]);
+  }, [appConversations, currentUser?.id]);
 
   useEffect(() => {
-    if (friends.length === 0 && appFriends.length > 0) {
+    if (currentUser?.id && friends.length === 0 && appFriends.length > 0) {
       setFriends(appFriends);
     }
-  }, [appFriends]);
+  }, [appFriends, currentUser?.id]);
 
   // =====================================================
   // LOAD ALL CHAT DATA
@@ -312,10 +343,12 @@ export default function Chat() {
       if (error) throw error;
 
       if (!memberships?.length) {
-        if (conversations.length === 0 && appConversations.length > 0) {
-          setConversations(appConversations);
-          if (!activeChat) setActiveChat(appConversations[0]);
-        }
+        setConversations([]);
+        setActiveChat(null);
+        setMessages([]);
+        try {
+          localStorage.removeItem(`nexus_chat_conversations_${currentUser.id}`);
+        } catch {}
         return;
       }
 
@@ -403,7 +436,7 @@ export default function Chat() {
       if (result.length > 0) {
         setConversations(result);
         try {
-          localStorage.setItem('nexus_chat_conversations', JSON.stringify(result));
+          localStorage.setItem(`nexus_chat_conversations_${currentUser.id}`, JSON.stringify(result));
         } catch {}
 
         setActiveChat((prev) => {
@@ -411,13 +444,16 @@ export default function Chat() {
           const matched = result.find((c) => c.id === prev.id);
           return matched || prev;
         });
+      } else {
+        setConversations([]);
+        setActiveChat(null);
+        setMessages([]);
+        try {
+          localStorage.removeItem(`nexus_chat_conversations_${currentUser.id}`);
+        } catch {}
       }
     } catch (err) {
       console.error('Conversation error:', err);
-      if (conversations.length === 0 && appConversations.length > 0) {
-        setConversations(appConversations);
-        if (!activeChat) setActiveChat(appConversations[0]);
-      }
     } finally {
       setLoadingChats(false);
     }
@@ -451,9 +487,10 @@ export default function Chat() {
       const uniqueIds = [...new Set(friendIds)];
 
       if (uniqueIds.length === 0) {
-        if (friends.length === 0 && appFriends.length > 0) {
-          setFriends(appFriends);
-        }
+        setFriends([]);
+        try {
+          localStorage.removeItem(`nexus_chat_friends_${currentUser.id}`);
+        } catch {}
         return;
       }
 
@@ -477,13 +514,10 @@ export default function Chat() {
 
       setFriends(formatted);
       try {
-        localStorage.setItem('nexus_chat_friends', JSON.stringify(formatted));
+        localStorage.setItem(`nexus_chat_friends_${currentUser.id}`, JSON.stringify(formatted));
       } catch {}
     } catch (err) {
       console.error('Friends loading error:', err);
-      if (friends.length === 0 && appFriends.length > 0) {
-        setFriends(appFriends);
-      }
     }
   }
 

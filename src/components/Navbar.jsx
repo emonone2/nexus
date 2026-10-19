@@ -28,7 +28,8 @@ export default function Navbar() {
     notifications,
     setIsPostModalOpen,
     searchQuery,
-    setSearchQuery
+    setSearchQuery,
+    handleLogout
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -261,7 +262,9 @@ export default function Navbar() {
     setIsSigningOut(true);
 
     try {
-      if (supabase && supabase.auth) {
+      if (handleLogout) {
+        await handleLogout();
+      } else if (supabase && supabase.auth) {
         await supabase.auth.signOut();
       }
     } catch (e) {

@@ -48,15 +48,23 @@ export default function Register() {
   };
 
   const clearLocalAppState = () => {
-    const keys = Object.keys(localStorage);
-    keys.forEach((key) => {
-      if (
-        key.startsWith('connectbd_') ||
-        key.startsWith('ConnectBD_')
-      ) {
-        localStorage.removeItem(key);
-      }
-    });
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach((key) => {
+        if (
+          key.startsWith('nexus_chat_') ||
+          key.startsWith('nexus_conversations') ||
+          key.startsWith('nexus_friends') ||
+          key.startsWith('nexus_db_messages') ||
+          key.startsWith('nexus_db_conversations') ||
+          key.startsWith('nexus_db_conversation_members') ||
+          key.startsWith('connectbd_') ||
+          key.startsWith('ConnectBD_')
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {}
   };
 
   const handleRegister = async (e) => {

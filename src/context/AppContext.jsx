@@ -298,6 +298,22 @@ export const AppProvider = ({ children }) => {
     const clearAccountState = () => {
       if (!mounted) return;
 
+      try {
+        const keys = Object.keys(localStorage);
+        keys.forEach((key) => {
+          if (
+            key.startsWith('nexus_chat_') ||
+            key.startsWith('nexus_conversations') ||
+            key.startsWith('nexus_friends') ||
+            key.startsWith('nexus_db_messages') ||
+            key.startsWith('nexus_db_conversations') ||
+            key.startsWith('nexus_db_conversation_members')
+          ) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch {}
+
       setCurrentUser(emptyUser);
       setPosts([]);
       setConversations([]);
@@ -1522,12 +1538,27 @@ export const AppProvider = ({ children }) => {
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
       console.error('Logout error:', error);
-      return;
     }
+
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach((key) => {
+        if (
+          key.startsWith('nexus_chat_') ||
+          key.startsWith('nexus_conversations') ||
+          key.startsWith('nexus_friends') ||
+          key.startsWith('nexus_db_messages') ||
+          key.startsWith('nexus_db_conversations') ||
+          key.startsWith('nexus_db_conversation_members')
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {}
 
     setCurrentUser(emptyUser);
     setPosts([]);
