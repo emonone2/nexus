@@ -1,5 +1,5 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const MODEL = "gemini-3.8-flash";
+const MODEL = "gemini-2.0-flash";
 
 export async function askGemini(prompt, systemInstruction = "You are Gemini, a helpful social assistant.") {
   if (!API_KEY) {

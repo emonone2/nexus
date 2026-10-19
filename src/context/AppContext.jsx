@@ -3,11 +3,13 @@ import { supabase } from '../lib/supabaseClient';
 
 const AppContext = createContext(null);
 
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80';
+
 const emptyUser = {
   id: null,
   name: '',
   handle: '',
-  avatar: '',
+  avatar: DEFAULT_AVATAR,
   cover: '',
   bio: '',
   location: '',
@@ -34,7 +36,7 @@ const profileToUser = (user, profile) => ({
   id: user.id,
   name: profile?.full_name || profile?.username || user.email?.split('@')[0] || 'User',
   handle: profile?.username || '',
-  avatar: profile?.profile_image || '',
+  avatar: profile?.profile_image || DEFAULT_AVATAR,
   cover: profile?.cover_image || '',
   bio: profile?.bio || '',
   location: profile?.location || '',

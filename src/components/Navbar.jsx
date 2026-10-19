@@ -543,8 +543,8 @@ export default function Navbar() {
                 className="flex items-center gap-2 p-0.5 rounded-xl hover:ring-2 hover:ring-indigo-500/50 transition-all shrink-0 cursor-pointer"
               >
                 <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
+                  src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'}
+                  alt={currentUser.name || 'User'}
                   className="w-8.5 h-8.5 rounded-xl object-cover border border-indigo-500/30"
                 />
               </button>

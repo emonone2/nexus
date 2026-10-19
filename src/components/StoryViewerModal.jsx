@@ -5,11 +5,36 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function StoryViewerModal() {
-  const { activeStory, setActiveStory, storyViews, recordStoryView, currentUser } = useApp();
+  const { activeStory, setActiveStory, storyViews, recordStoryView, currentUser, stories = [] } = useApp();
   const navigate = useNavigate();
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const [replyText, setReplyText] = useState('');
+
+  const currentIndex = stories.findIndex((s) => s.id === activeStory?.id);
+
+  const handleClose = () => {
+    setActiveStory(null);
+    setProgress(0);
+  };
+
+  const handlePrevStory = () => {
+    if (currentIndex > 0) {
+      setActiveStory(stories[currentIndex - 1]);
+      setProgress(0);
+    } else {
+      setProgress(0);
+    }
+  };
+
+  const handleNextStory = () => {
+    if (currentIndex >= 0 && currentIndex < stories.length - 1) {
+      setActiveStory(stories[currentIndex + 1]);
+      setProgress(0);
+    } else {
+      handleClose();
+    }
+  };
 
   // Automatically record view when a story is viewed
   useEffect(() => {
@@ -24,7 +49,7 @@ export default function StoryViewerModal() {
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          setActiveStory(null);
+          handleNextStory();
           return 0;
         }
         return prev + 2;
@@ -32,12 +57,7 @@ export default function StoryViewerModal() {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [activeStory, isPlaying, setActiveStory]);
-
-  const handleClose = () => {
-    setActiveStory(null);
-    setProgress(0);
-  };
+  }, [activeStory, isPlaying, currentIndex, stories]);
 
   if (!activeStory) return null;
 
@@ -148,19 +168,18 @@ export default function StoryViewerModal() {
             {/* Side Arrow Navigation Helpers */}
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => setProgress(0)}
+              onClick={handlePrevStory}
               className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 backdrop-blur-md cursor-pointer border border-white/5"
+              title="Previous story"
             >
               <ChevronLeft className="w-5 h-5" />
             </motion.button>
 
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => {
-                setActiveStory(null);
-                setProgress(0);
-              }}
+              onClick={handleNextStory}
               className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 backdrop-blur-md cursor-pointer border border-white/5"
+              title="Next story"
             >
               <ChevronRight className="w-5 h-5" />
             </motion.button>

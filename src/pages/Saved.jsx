@@ -10,7 +10,30 @@ export default function Saved() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newColName, setNewColName] = useState('');
 
-  const bookmarkedPosts = posts.filter(p => p.isBookmarked);
+  const bookmarkedPosts = posts.filter((p) => {
+    if (!p.isBookmarked) return false;
+    if (activeCollection === 'all') return true;
+
+    if (p.collectionId === activeCollection || p.collection === activeCollection) {
+      return true;
+    }
+
+    const activeCol = collectionsList.find((c) => c.id === activeCollection);
+    const label = activeCol?.label?.toLowerCase() || activeCollection.toLowerCase();
+    const content = (p.content || '').toLowerCase();
+
+    if (activeCollection === 'design') {
+      return content.includes('design') || content.includes('ui') || content.includes('ux') || content.includes('figma');
+    }
+    if (activeCollection === 'code') {
+      return content.includes('code') || content.includes('react') || content.includes('dev') || content.includes('js') || content.includes('css');
+    }
+    if (activeCollection === 'photos') {
+      return Boolean(p.image) || content.includes('photo') || content.includes('wallpaper');
+    }
+
+    return content.includes(label);
+  });
 
   const onSubmitNewCollection = (e) => {
     e.preventDefault();

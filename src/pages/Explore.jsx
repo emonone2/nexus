@@ -56,7 +56,7 @@ export default function Explore() {
         id: 'ev_1',
         title: 'React 19 Server Actions Summit 💻',
         host: 'Elena Rostova',
-        hostAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
+        hostAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80',
         description: 'An advanced deep dive into the React 19 architecture: learn Server Actions, useActionState, form mutations, and optimal Vite configuration with professional engineers.',
         date: 'Oct 14, 2026 • 7:00 PM GMT',
         location: 'Virtual Workshop Zoom 💻',

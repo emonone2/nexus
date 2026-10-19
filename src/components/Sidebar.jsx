@@ -55,8 +55,8 @@ export default function Sidebar() {
         >
           <div className="relative">
             <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
+              src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'}
+              alt={currentUser.name || 'User'}
               className="w-11 h-11 rounded-xl object-cover ring-2 ring-indigo-500/20 group-hover:scale-105 transition-transform duration-300"
             />
             <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-950 flex items-center justify-center">

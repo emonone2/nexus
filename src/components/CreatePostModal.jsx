@@ -149,8 +149,8 @@ export default function CreatePostModal() {
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div className="flex items-center gap-3">
                   <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
+                    src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'}
+                    alt={currentUser.name || 'User'}
                     className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500/25"
                   />
                   <div>

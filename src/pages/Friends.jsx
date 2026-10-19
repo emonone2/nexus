@@ -45,7 +45,7 @@ export default function Friends() {
     initialize();
   }, []);
 
-  const initialize = async () => {
+  async function initialize() {
     try {
       setLoading(true);
       setError('');

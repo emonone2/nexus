@@ -124,7 +124,7 @@ export default function Home() {
             className="w-28 h-44 rounded-3xl relative overflow-hidden group cursor-pointer border border-slate-200/60 dark:border-slate-800/60 glass-card flex flex-col justify-between p-3.5 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-900/40"
           >
             <img
-              src={currentUser.avatar}
+              src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'}
               alt="Your avatar"
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-60 dark:opacity-45 select-none pointer-events-none"
             />
@@ -224,8 +224,8 @@ export default function Home() {
       <div className="glass-card rounded-3xl p-5 mb-6 shadow-sm border border-slate-200/50 dark:border-slate-800/40 bg-white dark:bg-slate-900/40">
         <div className="flex items-center gap-3.5 mb-4">
           <img
-            src={currentUser.avatar}
-            alt={currentUser.name}
+            src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'}
+            alt={currentUser.name || 'User'}
             className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500/25"
           />
           <button

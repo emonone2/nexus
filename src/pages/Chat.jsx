@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   MessageSquare,
   Loader2,
-  RefreshCw,
   Search,
   Plus,
   Mic,
@@ -105,7 +104,7 @@ export default function Chat() {
     getUser();
   }, []);
 
-  const getUser = async () => {
+  async function getUser() {
     try {
       setLoading(true);
 
@@ -119,12 +118,12 @@ export default function Chat() {
       }
 
       setCurrentUser(user);
-    } catch (err) {
+    } catch {
       console.log('Chat fallback mode active');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // =====================================================
   // LOAD ALL CHAT DATA
@@ -192,7 +191,7 @@ export default function Chat() {
   // LOAD CONVERSATIONS
   // =====================================================
 
-  const loadConversations = async () => {
+  async function loadConversations() {
     try {
       setLoadingChats(true);
 
@@ -312,7 +311,7 @@ export default function Chat() {
   // LOAD FRIENDS
   // =====================================================
 
-  const loadFriends = async () => {
+  async function loadFriends() {
     try {
       // Accepted requests where I am sender
       const { data: sent } = await supabase
@@ -389,7 +388,7 @@ export default function Chat() {
   // CREATE / OPEN CONVERSATION
   // =====================================================
 
-  const openFriendChat = async (friend) => {
+  async function openFriendChat(friend) {
     try {
       setCreatingChat(true);
       setError('');
@@ -569,7 +568,7 @@ export default function Chat() {
     loadMessages();
   }, [activeChat?.id]);
 
-  const loadMessages = async () => {
+  async function loadMessages() {
     try {
       setLoadingMessages(true);
 
@@ -892,20 +891,7 @@ const sendMessage = async (e) => {
     setError('');
   };
 
-  // =====================================================
-  // TIME
-  // =====================================================
 
-  const formatTime = (date) => {
-    if (!date) return '';
-
-    return new Date(
-      date
-    ).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   // =====================================================
   // CALL DURATION

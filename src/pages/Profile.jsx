@@ -72,7 +72,7 @@ export default function Profile() {
     loadProfile();
   }, []);
 
-  const loadProfile = async () => {
+  async function loadProfile() {
     try {
       setLoading(true);
 
