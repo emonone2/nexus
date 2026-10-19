@@ -15,23 +15,25 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
+import { useApp } from '../context/AppContext';
 
 export default function Friends() {
   const navigate = useNavigate();
+  const { currentUser: appUser, friendsList: appFriends = [], friendRequests: appRequests = [] } = useApp();
 
   // =====================================================
   // STATE
   // =====================================================
-  const [currentUser, setCurrentUser] = useState(null);
-  const [friendsList, setFriendsList] = useState([]);
-  const [friendRequests, setFriendRequests] = useState([]);
+  const [currentUser, setCurrentUser] = useState(appUser?.id ? { id: appUser.id } : null);
+  const [friendsList, setFriendsList] = useState(appFriends);
+  const [friendRequests, setFriendRequests] = useState(appRequests);
   const [sentRequests, setSentRequests] = useState([]);
   const [suggestedUsers, setSuggestedUsers] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [requestStatuses, setRequestStatuses] = useState({});
   const [filterQuery, setFilterQuery] = useState('');
   const [activeFilterTab, setActiveFilterTab] = useState('all');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!appUser?.id && appFriends.length === 0);
   const [searching, setSearching] = useState(false);
   const [messageLoading, setMessageLoading] = useState(null);
   const [requestLoading, setRequestLoading] = useState(null);
@@ -47,7 +49,7 @@ export default function Friends() {
 
   async function initialize() {
     try {
-      setLoading(true);
+      if (!appUser?.id && appFriends.length === 0) setLoading(true);
       setError('');
 
       const {

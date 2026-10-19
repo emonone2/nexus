@@ -23,6 +23,7 @@ import {
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { supabase } from '../lib/supabaseClient';
+import { useApp } from '../context/AppContext';
 import useVoiceCall from '../hooks/useVoiceCall';
 import { chatWithGemini } from '../lib/geminiService';
 
@@ -30,18 +31,19 @@ export default function Chat() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryUserId = searchParams.get('userId');
+  const { currentUser: appUser, conversations: appConversations = [], friendsList: appFriends = [] } = useApp();
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(appUser?.id ? appUser : null);
 
-  const [conversations, setConversations] = useState([]);
-  const [friends, setFriends] = useState([]);
+  const [conversations, setConversations] = useState(appConversations);
+  const [friends, setFriends] = useState(appFriends);
 
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
 
   const [inputText, setInputText] = useState('');
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!appUser?.id);
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
@@ -106,7 +108,7 @@ export default function Chat() {
 
   async function getUser() {
     try {
-      setLoading(true);
+      if (!appUser?.id) setLoading(true);
 
       const {
         data: { user },

@@ -11,15 +11,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
+import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 
 export default function Marketplace() {
-  const [productsList, setProductsList] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser: appUser, productsList: initialProducts = [] } = useApp();
+  const [productsList, setProductsList] = useState(initialProducts);
+  const [currentUser, setCurrentUser] = useState(appUser?.id ? { id: appUser.id } : null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialProducts.length === 0 && !appUser?.id);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -49,7 +51,7 @@ export default function Marketplace() {
 
   const initializeMarketplace = async () => {
     try {
-      setLoading(true);
+      if (initialProducts.length === 0) setLoading(true);
       setError('');
 
       const {

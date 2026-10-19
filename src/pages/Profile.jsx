@@ -28,13 +28,26 @@ import { useApp } from '../context/AppContext';
 import PostCard from '../components/PostCard';
 
 export default function Profile() {
-  const { refreshCurrentUser, posts, friendsList, followedCreators } = useApp();
+  const { currentUser: appUser, refreshCurrentUser, posts, friendsList, followedCreators } = useApp();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [user, setUser] = useState(appUser?.id ? { id: appUser.id } : null);
+  const [profile, setProfile] = useState(
+    appUser?.id
+      ? {
+          id: appUser.id,
+          full_name: appUser.name,
+          username: appUser.handle,
+          profile_image: appUser.avatar,
+          cover_image: appUser.cover,
+          bio: appUser.bio,
+          location: appUser.location,
+          created_at: appUser.joined,
+        }
+      : null
+  );
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!appUser?.id);
   const [saving, setSaving] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
@@ -44,12 +57,12 @@ export default function Profile() {
   const [showEdit, setShowEdit] = useState(false);
 
   const [form, setForm] = useState({
-    full_name: '',
-    username: '',
-    bio: '',
-    profile_image: '',
-    cover_image: '',
-    location: '',
+    full_name: appUser?.name || '',
+    username: appUser?.handle || '',
+    bio: appUser?.bio || '',
+    profile_image: appUser?.avatar || '',
+    cover_image: appUser?.cover || '',
+    location: appUser?.location || '',
     designation: '',
     website: '',
     custom_status: '',
@@ -74,7 +87,7 @@ export default function Profile() {
 
   async function loadProfile() {
     try {
-      setLoading(true);
+      if (!appUser?.id) setLoading(true);
 
       const {
         data: { user: currentUser },
