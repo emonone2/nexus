@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Sparkles, Image as ImageIcon, FileText, Palette, Send, ArrowRight, Heart } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Sparkles, Image as ImageIcon, FileText, Palette, Send, ArrowRight, Heart, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 
@@ -10,6 +10,46 @@ export default function CreateStoryModal() {
   const [text, setText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [selectedGradient, setSelectedGradient] = useState('from-indigo-600 via-purple-600 to-pink-500');
+  const fileInputRef = useRef(null);
+
+  const handleImageFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 12 * 1024 * 1024) {
+      alert('Selected image is too large. Please select an image under 12MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setImageUrl(compressedDataUrl);
+      };
+      img.src = event.target?.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const presetGradients = [
     { name: 'Sunset Aura', class: 'from-indigo-600 via-purple-600 to-pink-500' },
@@ -159,14 +199,31 @@ export default function CreateStoryModal() {
                 // Photo Story Fields
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider mb-2">Custom Photo URL</label>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Upload or Photo URL</label>
                     <input
-                      type="url"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="https://example.com/my-photo.jpg"
-                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileSelect}
                     />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-600 dark:text-indigo-400 rounded-2xl text-xs font-bold flex items-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition cursor-pointer shrink-0"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Photo</span>
+                      </button>
+                      <input
+                        type="url"
+                        value={imageUrl.startsWith('data:') ? 'Custom Photo Uploaded ✓' : imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        placeholder="Or paste https://example.com/photo.jpg"
+                        className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                      />
+                    </div>
                   </div>
 
                   {/* Preset Background Photos */}

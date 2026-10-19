@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Smile, Globe, Tag, Sparkles, SmilePlus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Image as ImageIcon, Smile, Globe, Tag, Sparkles, SmilePlus, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { askGemini } from '../lib/geminiService';
@@ -15,6 +15,7 @@ export default function CreatePostModal() {
   } = useApp();
   
   const [content, setContent] = useState('');
+  const fileInputRef = useRef(null);
   
   useEffect(() => {
     if (isPostModalOpen && prefilledPostContent) {
@@ -77,6 +78,46 @@ export default function CreatePostModal() {
     'https://images.unsplash.com/photo-1426604966848-d7adac402bff?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80'
   ];
+
+  const handleImageFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 12 * 1024 * 1024) {
+      alert('Selected image is too large. Please select an image under 12MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setImageUrl(compressedDataUrl);
+        setSelectedGradient('');
+      };
+      img.src = event.target?.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -332,6 +373,27 @@ export default function CreatePostModal() {
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950/20 rounded-2xl mb-6 border border-slate-100 dark:border-slate-800/30">
                 <span className="text-xs font-bold text-slate-400">Add visuals to your post</span>
                 <div className="flex items-center gap-1">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageFileSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedGradient) {
+                        alert("Gradients cards cannot have image attachments.");
+                        return;
+                      }
+                      fileInputRef.current?.click();
+                    }}
+                    className="p-2 rounded-xl transition-all cursor-pointer text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                    title="Upload image from device"
+                  >
+                    <Upload className="w-5 h-5" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => {

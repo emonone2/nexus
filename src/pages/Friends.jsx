@@ -43,10 +43,6 @@ export default function Friends() {
   // =====================================================
   // INITIALIZE
   // =====================================================
-  useEffect(() => {
-    initialize();
-  }, []);
-
   async function initialize() {
     try {
       if (!appUser?.id && appFriends.length === 0) setLoading(true);
@@ -75,7 +71,11 @@ export default function Friends() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    initialize();
+  }, []);
 
   const clearMessages = () => {
     setError('');

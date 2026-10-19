@@ -24,8 +24,19 @@ export default function PostCard({ post }) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [copiedShare, setCopiedShare] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [currentReaction, setCurrentReaction] = useState(post.isLiked ? '❤️' : null);
 
-  // Floating Heart Particle Reactions State
+  const reactionsList = [
+    { emoji: '❤️', name: 'Love' },
+    { emoji: '🔥', name: 'Fire' },
+    { emoji: '👍', name: 'Like' },
+    { emoji: '😂', name: 'Haha' },
+    { emoji: '🚀', name: 'Rocket' },
+    { emoji: '🎉', name: 'Celebrate' }
+  ];
+
+  // Floating Reaction Particle Reactions State
   const [heartBursts, setHeartBursts] = useState([]);
 
   // AI Translation & Explanation states
@@ -58,26 +69,66 @@ export default function PostCard({ post }) {
     setShowComments(true);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    const postUrl = `${window.location.origin}/#post-${post.id}`;
     setCopiedShare(true);
-    navigator.clipboard?.writeText?.(`${window.location.origin}/profile/${post.author.handle}`);
-    setTimeout(() => setCopiedShare(false), 2000);
+    setTimeout(() => setCopiedShare(false), 2400);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Post by ${post.author?.name || 'Nexus User'}`,
+          text: postText.slice(0, 100),
+          url: postUrl
+        });
+        return;
+      } catch (err) {
+        // Fallback to clipboard if share cancelled
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(postUrl);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const triggerBursts = (emoji = '❤️') => {
+    const bursts = Array.from({ length: 8 }).map((_, i) => ({
+      id: `burst_${Date.now()}_${i}`,
+      emoji,
+      x: Math.random() * 100 - 50,
+      y: -Math.random() * 40 - 10,
+      scale: Math.random() * 0.4 + 0.8,
+      delay: i * 0.04
+    }));
+    setHeartBursts(bursts);
+    setTimeout(() => setHeartBursts([]), 1600);
+  };
+
+  const handleSelectReaction = (reaction) => {
+    setCurrentReaction(reaction.emoji);
+    setShowReactionPicker(false);
+    if (!post.isLiked) {
+      handleLikePost(post.id);
+    }
+    triggerBursts(reaction.emoji);
   };
 
   const onLikeClick = () => {
-    if (!post.isLiked) {
-      // Trigger a beautiful burst of floating heart particles
-      const bursts = Array.from({ length: 8 }).map((_, i) => ({
-        id: `heart_burst_${Date.now()}_${i}`,
-        x: Math.random() * 100 - 50, // random offset left/right
-        y: -Math.random() * 40 - 10, // random upward speed start
-        scale: Math.random() * 0.4 + 0.8,
-        delay: i * 0.04
-      }));
-      setHeartBursts(bursts);
-      setTimeout(() => setHeartBursts([]), 1600);
+    if (currentReaction) {
+      setCurrentReaction(null);
+      if (post.isLiked) {
+        handleLikePost(post.id);
+      }
+    } else {
+      setCurrentReaction('❤️');
+      triggerBursts('❤️');
+      if (!post.isLiked) {
+        handleLikePost(post.id);
+      }
     }
-    handleLikePost(post.id);
   };
 
   return (
@@ -279,7 +330,7 @@ export default function PostCard({ post }) {
             animate={post.isLiked ? { scale: [1, 1.3, 1] } : {}}
             className="w-5.5 h-5.5 rounded-full bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-white text-[10px]"
           >
-            ❤️
+            {currentReaction || '❤️'}
           </motion.span>
           <span className="font-extrabold text-slate-700 dark:text-slate-300">{post.likes} Likes</span>
         </div>
@@ -297,7 +348,7 @@ export default function PostCard({ post }) {
       {/* Interactive Action Buttons */}
       <div className="flex items-center justify-between pt-3 gap-1 relative">
         
-        {/* Floating Heart Reaction Bursts */}
+        {/* Floating Heart / Reaction Bursts */}
         <AnimatePresence>
           {heartBursts.map((hb) => (
             <motion.span
@@ -306,27 +357,82 @@ export default function PostCard({ post }) {
               animate={{ opacity: 0, y: -140, scale: hb.scale, x: hb.x }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1.2, ease: 'easeOut', delay: hb.delay }}
-              className="absolute pointer-events-none text-red-500 z-50 text-xl font-bold"
+              className="absolute pointer-events-none z-50 text-xl font-bold select-none"
               style={{ left: '16%' }}
             >
-              ❤️
+              {hb.emoji || '❤️'}
             </motion.span>
           ))}
         </AnimatePresence>
 
-        {/* Like Button */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={onLikeClick}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
-            post.isLiked
-              ? 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 shadow-inner border border-pink-500/10'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-          }`}
+        {/* Share Feedback Toast */}
+        <AnimatePresence>
+          {copiedShare && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.95 }}
+              animate={{ opacity: 1, y: -38, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.95 }}
+              className="absolute right-12 bottom-full px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-[11px] font-bold rounded-xl shadow-xl border border-slate-700 flex items-center gap-1.5 z-40 pointer-events-none"
+            >
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Link copied to clipboard!</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Like Button & Reaction Popover Container */}
+        <div 
+          className="flex-1 relative"
+          onMouseEnter={() => setShowReactionPicker(true)}
+          onMouseLeave={() => setShowReactionPicker(false)}
         >
-          <Heart className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${post.isLiked ? 'fill-current text-pink-500 scale-110' : ''}`} />
-          <span>Like</span>
-        </motion.button>
+          {/* Reaction Picker Bar */}
+          <AnimatePresence>
+            {showReactionPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: -48, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-0 bottom-full mb-1 flex items-center gap-1 p-1.5 bg-white dark:bg-slate-900 rounded-full shadow-2xl border border-slate-200/80 dark:border-slate-800 z-50"
+              >
+                {reactionsList.map((r) => (
+                  <motion.button
+                    key={r.name}
+                    type="button"
+                    whileHover={{ scale: 1.35, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectReaction(r);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-base hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-transform cursor-pointer"
+                    title={r.name}
+                  >
+                    {r.emoji}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onLikeClick}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
+              currentReaction || post.isLiked
+                ? 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 shadow-inner border border-pink-500/10'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            {currentReaction ? (
+              <span className="text-base">{currentReaction}</span>
+            ) : (
+              <Heart className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${post.isLiked ? 'fill-current text-pink-500 scale-110' : ''}`} />
+            )}
+            <span>{currentReaction ? (reactionsList.find(r => r.emoji === currentReaction)?.name || 'Liked') : 'Like'}</span>
+          </motion.button>
+        </div>
 
         {/* Comment Button */}
         <motion.button

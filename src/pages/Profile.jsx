@@ -81,10 +81,6 @@ export default function Profile() {
   // ==========================================
   // LOAD CURRENT USER + PROFILE
   // ==========================================
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
   async function loadProfile() {
     try {
       if (!appUser?.id) setLoading(true);
@@ -167,7 +163,11 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   // ==========================================
   // DEFAULT AVATAR

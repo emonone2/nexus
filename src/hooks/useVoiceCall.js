@@ -96,9 +96,9 @@ const showIncomingCallNotification = async ({
             {
               body,
 
-              icon: '/favicon.ico',
+              icon: '/favicon.svg',
 
-              badge: '/favicon.ico',
+              badge: '/favicon.svg',
 
               tag,
 
@@ -141,7 +141,7 @@ const showIncomingCallNotification = async ({
         {
           body,
 
-          icon: '/favicon.ico',
+          icon: '/favicon.svg',
 
           tag,
 

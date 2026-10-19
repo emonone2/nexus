@@ -65,16 +65,61 @@ export default function Chat() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setSelectedFile({
-        name: file.name,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        data: event.target?.result
-      });
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 15 * 1024 * 1024) {
+      alert('File is too large. Please select a file under 15MB.');
+      return;
+    }
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+          setSelectedFile({
+            name: file.name,
+            type: 'image/jpeg',
+            size: Math.round((compressedDataUrl.length * 3) / 4),
+            data: compressedDataUrl
+          });
+        };
+        img.src = event.target?.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Non-image file is too large for chat. Limit is 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSelectedFile({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size,
+          data: event.target?.result
+        });
+      };
+      reader.readAsDataURL(file);
+    }
     e.target.value = '';
   };
 
@@ -101,11 +146,6 @@ export default function Chat() {
   // =====================================================
   // CURRENT USER
   // =====================================================
-
-  useEffect(() => {
-    getUser();
-  }, []);
-
   async function getUser() {
     try {
       if (!appUser?.id) setLoading(true);
@@ -126,6 +166,10 @@ export default function Chat() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    getUser();
+  }, []);
 
   // =====================================================
   // LOAD ALL CHAT DATA
