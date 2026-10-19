@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Users, UserPlus, Check, X, Sparkles } from 'lucide-react';
+import { Users, UserPlus, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 
@@ -142,28 +142,6 @@ export default function Rightbar() {
           ))}
         </div>
       </div>
-
-      {/* Sponsored Creator Studio Pro Promo Banner */}
-      <motion.div 
-        whileHover={{ y: -2 }}
-        className="p-5 rounded-3xl bg-gradient-to-tr from-[#121626] via-[#1E193C] to-[#121626] text-white shadow-xl relative overflow-hidden group border border-indigo-500/20"
-      >
-        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 text-indigo-300 font-bold text-[10px] uppercase tracking-wider mb-2.5">
-            <Sparkles className="w-4 h-4 text-pink-400" />
-            <span>Nexus Creator Studio</span>
-          </div>
-          <h4 className="font-extrabold text-sm mb-1 font-['Outfit']">Upgrade to Creator Pro</h4>
-          <p className="text-xs text-slate-300 mb-4 leading-normal font-medium">Get verified badges, custom themes, analytics and 4K media uploads.</p>
-          <motion.button 
-            whileTap={{ scale: 0.96 }}
-            className="w-full py-2 bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 rounded-xl font-bold text-xs shadow-lg shadow-pink-500/10 transition-all cursor-pointer"
-          >
-            Explore Features
-          </motion.button>
-        </div>
-      </motion.div>
 
     </aside>
   );
